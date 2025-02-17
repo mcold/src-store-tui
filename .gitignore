@@ -1,0 +1,8 @@
+.vscode
+.idea
+bin
+src/*.exe*
+*.exe*
+*.txt
+src/*.db*
+*.log

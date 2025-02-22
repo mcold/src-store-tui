@@ -6,3 +6,5 @@ src/*.exe*
 *.txt
 src/*.db*
 *.log
+*.db
+todo

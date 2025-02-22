@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"log"
 	_ "modernc.org/sqlite"
 )
 
@@ -35,6 +36,7 @@ func (database *databaseType) Connect() error {
 
 func check(err interface{}) {
 	if err != nil {
+		log.Println(err)
 		panic(err)
 	}
 }

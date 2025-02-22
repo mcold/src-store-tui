@@ -83,6 +83,9 @@ func (pagePro *pageProType) build() {
 
 // fulfill project list
 func setListPro() {
+	log.Println("-------------------------------")
+	log.Println("setListPro")
+	log.Println("--------- files -----------")
 	query := `select id
 				   , name
 				   , comment
@@ -105,6 +108,8 @@ func setListPro() {
 		pagePro.mPosId[posNum-1] = id
 		pagePro.lPro.AddItem(sName, sComment, rune(0), func() {})
 	}
+
+	log.Println("-------------------------------")
 }
 
 // fulfill project tree

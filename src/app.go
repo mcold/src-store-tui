@@ -35,6 +35,20 @@ func (application *applicationType) registerGlobalShortcuts() {
 		switch event.Key() {
 		case tcell.KeyCtrlC:
 			application.ConfirmQuit()
+		case tcell.KeyF2:
+			app.SetFocus(pagePro.lPro)
+		case tcell.KeyF3:
+			pagePro.Pages.SwitchToPage("proTree")
+			app.SetFocus(pageProTree.trPro)
+		case tcell.KeyF4:
+			pagePro.Pages.SwitchToPage("proDesc")
+			app.SetFocus(pageProDesc.Flex)
+		case tcell.KeyF5:
+			pageProTree.Pages.SwitchToPage("src")
+			app.SetFocus(pageSrc.Flex)
+		case tcell.KeyF6:
+			pageProTree.Pages.SwitchToPage("proObjDesc")
+			app.SetFocus(pageObjDesc.Flex)
 		default:
 			return event
 		}

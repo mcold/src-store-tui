@@ -24,6 +24,7 @@ func (pageProTree *pageProTreeType) build() {
 	pageSrc.build()
 	pageObjDesc.build()
 	pageSrcDesc.build()
+	pageExec.build()
 
 	pageProTree.curFolderID = 0
 
@@ -98,6 +99,7 @@ func setTreePro(pos int) {
 		objNode.SetSelectedFunc(func() {
 			pageSrc.lSrc.Clear()
 			setFileSrc(int(id.Int64))
+			setObjExec(int(id.Int64))
 			pageProTree.Pages.SwitchToPage("src")
 		})
 
@@ -172,4 +174,26 @@ func setTreeFolderPro(node *tview.TreeNode) {
 	objects.Close()
 
 	log.Println("-------------------------------")
+}
+
+func setObjExec(id int) {
+	log.Println("-------------------------------")
+	log.Println("setObjExec")
+	log.Println("--------------------")
+	query := `select exec
+				   , output
+				from obj
+			   where id = ` + strconv.Itoa(id)
+
+	obj := database.QueryRow(query)
+	check(obj.Err())
+
+	var exec, output sql.NullString
+	log.Println(output)
+	err := obj.Scan(&exec, &output)
+	check(err)
+
+	pageExec.execArea.SetText(exec.String, true)
+	pageExec.outArea.SetText(output.String, true)
+
 }

@@ -3,6 +3,7 @@ module github.com/mcold/src-tui
 go 1.22.2
 
 require (
+	github.com/atotto/clipboard v0.1.4
 	github.com/gdamore/tcell/v2 v2.8.1
 	github.com/rivo/tview v0.0.0-20241227133733-17b7edb88c57
 	modernc.org/sqlite v1.34.5

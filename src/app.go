@@ -50,6 +50,9 @@ func (application *applicationType) registerGlobalShortcuts() {
 		case tcell.KeyF6:
 			pageProTree.Pages.SwitchToPage("proObjDesc")
 			app.SetFocus(pageObjDesc.Flex)
+		case tcell.KeyF10:
+			pageProTree.Pages.SwitchToPage("exec")
+			app.SetFocus(pageExec.Flex)
 		case tcell.KeyF11:
 			pageProTree.Pages.SwitchToPage("proSrcDesc")
 			app.SetFocus(pageSrcDesc.Flex)

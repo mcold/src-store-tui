@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS OBJ
     comment     varchar,
     object_type integer not null, -- 0 - folder / 1 - file
     tags 		varchar,
+    exec        varchar,
+    output      varchar,
     FOREIGN KEY (id_prj) REFERENCES PRJ (id)
     );
 

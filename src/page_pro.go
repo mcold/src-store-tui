@@ -9,9 +9,7 @@ import (
 )
 
 type pageProType struct {
-	lPro *tview.List
-	//trPro       *tview.TreeView
-	//rootPro     *tview.TreeNode
+	lPro   *tview.List
 	mPosId map[int]int
 	*tview.Pages
 }
@@ -38,19 +36,21 @@ func (pagePro *pageProType) build() {
 	pagePro.lPro.SetSelectedFunc(func(pos int, _ string, _ string, _ rune) {
 
 		pagePro.Pages.SwitchToPage("proTree")
-		//log.Println(pos)
-		//log.Println(pagePro.mPosId[pos])
-		//log.Println("-------")
 		pageProTree.rootPro.ClearChildren()
-		log.Println("---- mPos start ----")
-		for i, k := range pagePro.mPosId {
-			log.Println(strconv.Itoa(i) + ": " + strconv.Itoa(k))
-		}
-		log.Println("---- mPos end ----")
 
 		setTreePro(pos)
+		setProComment()
 
 		app.SetFocus(pageProTree.Flex)
+	})
+
+	pagePro.lPro.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyDelete || event.Key() == tcell.KeyDEL {
+			delPro(pagePro.mPosId[pagePro.lPro.GetCurrentItem()])
+			reloadProTree()
+			return nil
+		}
+		return event
 	})
 
 	flexPro := tview.NewFlex().SetDirection(tview.FlexColumn).
@@ -69,7 +69,6 @@ func (pagePro *pageProType) build() {
 func setListPro() {
 	log.Println("-------------------------------")
 	log.Println("setListPro")
-	log.Println("--------- files -----------")
 	query := `select id
 				   , name
 				   , comment
@@ -82,16 +81,71 @@ func setListPro() {
 	posNum := 0
 	for pros.Next() {
 		posNum++
-		id := -1
+		var id sql.NullInt64
 		var name, comment sql.NullString
 
 		err := pros.Scan(&id, &name, &comment)
-		sName, sComment := name.String, comment.String
 		check(err)
 
-		pagePro.mPosId[posNum-1] = id
-		pagePro.lPro.AddItem(sName, sComment, rune(0), func() {})
+		pagePro.mPosId[posNum-1] = int(id.Int64)
+		pagePro.lPro.AddItem(name.String, comment.String, rune(0), func() {})
 	}
 
+	pros.Close()
+
 	log.Println("-------------------------------")
+}
+
+func setProComment() {
+	log.Println("-------------------------------")
+	log.Println("setProComment")
+	query := `select comment
+				from prj` +
+		` where id = ` + strconv.Itoa(pagePro.mPosId[pagePro.lPro.GetCurrentItem()])
+
+	pros, err := database.Query(query)
+	check(err)
+
+	pros.Next()
+	var comment sql.NullString
+	err = pros.Scan(&comment)
+
+	pageProDesc.descArea.SetText(comment.String, true)
+	pros.Close()
+
+	log.Println("-------------------------------")
+}
+
+func delPro(idPro int) {
+
+	querySrc := `DELETE FROM src
+			    WHERE id_prj = ` + strconv.Itoa(idPro)
+
+	log.Println("delPro", querySrc)
+	_, err := database.Exec(querySrc)
+	check(err)
+
+	queryObj := `DELETE FROM obj
+			    WHERE id_prj = ` + strconv.Itoa(idPro)
+
+	log.Println("delPro", queryObj)
+	_, err = database.Exec(queryObj)
+
+	queryPro := `DELETE FROM prj
+			    WHERE id = ` + strconv.Itoa(idPro)
+
+	log.Println("delPro", queryPro)
+	_, err = database.Exec(queryPro)
+
+	check(err)
+}
+
+func reloadProTree() {
+	pagePro.lPro.Clear()
+	pageProTree.rootPro.ClearChildren()
+	setListPro()
+
+	if pagePro.lPro.GetItemCount() > 0 {
+		pagePro.lPro.SetCurrentItem(0)
+	}
 }

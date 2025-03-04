@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"log"
 	_ "modernc.org/sqlite"
+	"path/filepath"
+	"runtime"
 )
 
 type databaseType struct {
@@ -36,7 +38,10 @@ func (database *databaseType) Connect() error {
 
 func check(err interface{}) {
 	if err != nil {
+		_, fileName, lineNo, _ := runtime.Caller(1) // Получаем информацию о вызывающем файле
+		log.Printf("%s: %d\n", filepath.Base(fileName), lineNo)
 		log.Println(err)
+		
 		panic(err)
 	}
 }

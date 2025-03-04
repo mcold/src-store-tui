@@ -9,7 +9,8 @@ import (
 )
 
 type pageSrcType struct {
-	lSrc *tview.List
+	lSrc   *tview.List
+	mPosId map[int]int
 	*tview.Flex
 }
 
@@ -25,10 +26,16 @@ func (pageSrc *pageSrcType) build() {
 	pageSrc.lSrc.ShowSecondaryText(true).
 		SetBorderPadding(1, 1, 1, 1)
 
+	pageSrc.lSrc.SetSelectedBackgroundColor(tcell.ColorOrange)
+
+	pageSrc.lSrc.SetSelectedFunc(func(i int, s string, s2 string, r rune) {
+		pageSrcDesc.descArea.SetText(s2, true)
+	})
+
+	pageSrc.mPosId = make(map[int]int)
+
 	pageSrc.Flex = tview.NewFlex().SetDirection(tview.FlexColumn).
 		AddItem(pageSrc.lSrc, 0, 1, true)
-
-	//pageSrc.Flex.SetBorder(true).SetBorderColor(tcell.ColorBlue)
 
 	pageSrc.Flex.SetTitle("F5/F6").
 		SetTitleAlign(tview.AlignLeft)
@@ -44,7 +51,7 @@ func setFileSrc(idFile int) {
 	query := `select id
 				   , line
 				   , comment
-				from srcc
+				from src
 			   where id_file = ` + strconv.Itoa(idFile) +
 		` order by num asc`
 
@@ -53,16 +60,21 @@ func setFileSrc(idFile int) {
 	lines, err := database.Query(query)
 	check(err)
 
+	posNum := 0
 	for lines.Next() {
+		posNum++
 		var id sql.NullInt64
 		var line, comment sql.NullString
 
 		err := lines.Scan(&id, &line, &comment)
 		check(err)
 
+		pageSrc.mPosId[posNum-1] = int(id.Int64)
 		pageSrc.lSrc.AddItem(line.String, comment.String, rune(0), func() {})
 
 	}
+
+	lines.Close()
 
 	log.Println("-------------------------------")
 }

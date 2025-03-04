@@ -23,6 +23,7 @@ func (pageProTree *pageProTreeType) build() {
 	pageProTree.Pages = tview.NewPages()
 	pageSrc.build()
 	pageObjDesc.build()
+	pageSrcDesc.build()
 
 	pageProTree.curFolderID = 0
 
@@ -38,6 +39,14 @@ func (pageProTree *pageProTreeType) build() {
 	pageProTree.trPro.SetRoot(pageProTree.rootPro)
 
 	pageProTree.rootPro.SetExpanded(true)
+
+	pageObjDesc.Flex.SetFocusFunc(func() {
+		app.SetFocus(pageObjDesc.descArea)
+	})
+
+	pageSrcDesc.Flex.SetFocusFunc(func() {
+		app.SetFocus(pageSrcDesc.descArea)
+	})
 
 	pageProTree.Flex = tview.NewFlex().SetDirection(tview.FlexColumn).
 		AddItem(pageProTree.trPro, 0, 1, true).
@@ -56,78 +65,59 @@ func (pageProTree *pageProTreeType) build() {
 func setTreePro(pos int) {
 	log.Println("-------------------------------")
 	log.Println("setTreePro")
-	log.Println("--------- files -----------")
 
-	// files
-	queryFile := `select id
+	queryObject := `select id
 				   , name
-				   , comment
-				from file
-			   where id_folder is null
-				 and id_prj = ` + strconv.Itoa(pagePro.mPosId[pos])
+				   , object_type
+				from obj
+			   where id_parent is null
+				 and id_prj = ` + strconv.Itoa(pagePro.mPosId[pos]) +
+		` order by object_type asc`
 
-	log.Println(queryFile)
+	log.Println(queryObject)
 
-	files, err := database.Query(queryFile)
+	objects, err := database.Query(queryObject)
 	check(err)
 
-	for files.Next() {
-		id := -1
-		var fileName, fileComment sql.NullString
-		err := files.Scan(&id, &fileName, &fileComment)
+	for objects.Next() {
+		var id sql.NullInt64
+		var objName sql.NullString
+		var objType sql.NullInt16
+		err := objects.Scan(&id, &objName, &objType)
 		check(err)
 
 		log.Println(id)
-		log.Println(fileName.String)
-		log.Println(fileComment.String)
+		log.Println(objName.String)
+		log.Println(objName.String)
 
-		fileNode := tview.NewTreeNode(fileName.String).
-			SetReference(id).
+		objNode := tview.NewTreeNode(objName.String).
+			SetReference(int(id.Int64)).
 			SetSelectable(true).
 			SetColor(tcell.ColorGreen)
 
-		fileNode.SetSelectedFunc(func() {
+		objNode.SetSelectedFunc(func() {
 			pageSrc.lSrc.Clear()
-			setFileSrc(id)
+			setFileSrc(int(id.Int64))
 			pageProTree.Pages.SwitchToPage("src")
 		})
 
-		pageProTree.rootPro.AddChild(fileNode)
+		switch int(objType.Int16) {
+		case 0:
+			objNode.SetColor(tcell.ColorOrange)
+			pageProTree.curFolderID = int(id.Int64)
+			setTreeFolderPro(objNode)
+		case 1:
+			objNode.SetColor(tcell.ColorGrey)
+		default:
+			objNode.SetColor(tcell.ColorRed)
+		}
+
+		pageProTree.rootPro.AddChild(objNode)
+		//pageProTree.mObjType[strconv.Itoa(int(id.Int64))+fileName.String] = "file"
 	}
 
-	// folders
-	log.Println("--------- folders -----------")
-	log.Println("current item in list: " + strconv.Itoa(pagePro.lPro.GetCurrentItem()))
-	log.Println("mpos[pagePro.lPro.GetCurrentItem()]: " + strconv.Itoa(pagePro.mPosId[pagePro.lPro.GetCurrentItem()]))
-	queryFolder := `select id
-				   , name
-				   , comment
-				from folder
-			   where id_parent is null
-                 and id_prj = ` + strconv.Itoa(pagePro.mPosId[pagePro.lPro.GetCurrentItem()])
+	objects.Close()
 
-	log.Println(queryFolder)
-
-	folders, err := database.Query(queryFolder)
-	check(err)
-
-	for folders.Next() {
-		id := -1
-		var folderName, folderComment sql.NullString
-		err := folders.Scan(&id, &folderName, &folderComment)
-		check(err)
-
-		log.Println(id)
-		log.Println(folderName.String)
-		log.Println(folderComment.String)
-
-		folderNode := tview.NewTreeNode(folderName.String).SetReference(id).SetSelectable(true).
-			SetColor(tcell.ColorGreen)
-
-		pageProTree.curFolderID = id
-		setTreeFolderPro(folderNode)
-		pageProTree.rootPro.AddChild(folderNode)
-	}
 	log.Println("-------------------------------")
 }
 
@@ -137,67 +127,49 @@ func setTreeFolderPro(node *tview.TreeNode) {
 	log.Println("setTreeFolderPro")
 	log.Println("--------------------")
 
-	if pageProTree.curFolderID == 0 {
-		return
-	}
-
-	// files
-	log.Println("--------- files -----------")
-	queryFile := `select id
+	queryObj := `select id
 					   , name
-					   , comment
-					from file
-				   where id_folder = ` + strconv.Itoa(pageProTree.curFolderID)
+					   , object_type
+					from obj
+				   where id_parent = ` + strconv.Itoa(pageProTree.curFolderID) +
+		` order by object_type asc`
 
-	log.Println(queryFile)
+	log.Println(queryObj)
 
-	files, err := database.Query(queryFile)
+	objects, err := database.Query(queryObj)
 	check(err)
 
-	for files.Next() {
-		id := -1
-		var fileName, fileComment sql.NullString
-		err := files.Scan(&id, &fileName, &fileComment)
+	for objects.Next() {
+		var id sql.NullInt64
+		var objName sql.NullString
+		var objType sql.NullInt16
+		err := objects.Scan(&id, &objName, &objType)
 		check(err)
 
-		fileNode := tview.NewTreeNode(fileName.String).
-			SetReference(id).
+		objNode := tview.NewTreeNode(objName.String).
+			SetReference(int(id.Int64)).
 			SetSelectable(true).
 			SetColor(tcell.ColorGreen)
 
-		fileNode.SetSelectedFunc(func() {
-			pageSrc.lSrc.Clear()
-			setFileSrc(id)
-		})
+		switch int(objType.Int16) {
+		case 0: // folder
+			objNode.SetColor(tcell.ColorOrange)
+			pageProTree.curFolderID = int(id.Int64)
+			setTreeFolderPro(objNode)
+		case 1: // file
+			objNode.SetColor(tcell.ColorGrey)
+			objNode.SetSelectedFunc(func() {
+				pageSrc.lSrc.Clear()
+				setFileSrc(int(id.Int64))
+			})
+		default:
+			objNode.SetColor(tcell.ColorRed)
+		}
 
-		node.AddChild(fileNode)
+		node.AddChild(objNode)
 	}
 
-	log.Println("--------- folders -----------")
-	// folders
-	queryFolder := `select id
-						   , name
-						   , comment
-						from folder
-					   where id_parent = ` + strconv.Itoa(pageProTree.curFolderID)
+	objects.Close()
 
-	log.Println(queryFolder)
-
-	folders, err := database.Query(queryFolder)
-	check(err)
-
-	for folders.Next() {
-		id := -1
-		var folderName, folderComment sql.NullString
-		err := folders.Scan(&id, &folderName, &folderComment)
-		check(err)
-
-		folderNode := tview.NewTreeNode(folderName.String).SetReference(id).SetSelectable(true).
-			SetColor(tcell.ColorGreen)
-
-		pageProTree.curFolderID = id
-		setTreeFolderPro(folderNode)
-		node.AddChild(folderNode)
-	}
 	log.Println("-------------------------------")
 }

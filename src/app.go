@@ -42,6 +42,7 @@ func (application *applicationType) registerGlobalShortcuts() {
 			app.SetFocus(pageProTree.trPro)
 		case tcell.KeyF4:
 			pagePro.Pages.SwitchToPage("proDesc")
+			setProComment()
 			app.SetFocus(pageProDesc.Flex)
 		case tcell.KeyF5:
 			pageProTree.Pages.SwitchToPage("src")
@@ -49,6 +50,9 @@ func (application *applicationType) registerGlobalShortcuts() {
 		case tcell.KeyF6:
 			pageProTree.Pages.SwitchToPage("proObjDesc")
 			app.SetFocus(pageObjDesc.Flex)
+		case tcell.KeyF11:
+			pageProTree.Pages.SwitchToPage("proSrcDesc")
+			app.SetFocus(pageSrcDesc.Flex)
 		default:
 			return event
 		}

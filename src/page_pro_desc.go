@@ -3,6 +3,8 @@ package main
 import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
+	"log"
+	"strconv"
 )
 
 type pageProDescType struct {
@@ -27,5 +29,30 @@ func (pageProDesc *pageProDescType) build() {
 	pageProDesc.Flex.SetTitle("F4/F3").
 		SetTitleAlign(tview.AlignLeft)
 
+	pageProDesc.descArea.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+
+		if event.Rune() == 's' && event.Modifiers() == tcell.ModAlt {
+			saveProDesc()
+			pageProDesc.descArea.SetText("", true)
+			pagePro.Pages.SwitchToPage("proTree")
+			return nil
+		}
+		return event
+	})
+
 	pagePro.Pages.AddPage("proDesc", pageProDesc.Flex, true, false)
+}
+
+func saveProDesc() {
+
+	query := "UPDATE prj" + "\n" +
+		"SET comment = '" + pageProDesc.descArea.GetText() + "'\n" +
+		"WHERE id = " + strconv.Itoa(pagePro.mPosId[pagePro.lPro.GetCurrentItem()])
+
+	log.Println(query)
+
+	_, err := database.Exec(query, "PRAGMA busy_timeout=30000;")
+
+	check(err)
+
 }

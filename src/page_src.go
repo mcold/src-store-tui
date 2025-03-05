@@ -32,6 +32,21 @@ func (pageSrc *pageSrcType) build() {
 		pageSrcDesc.descArea.SetText(s2, true)
 	})
 
+	pageSrc.lSrc.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+
+		if event.Key() == tcell.KeyDelete {
+			curPos := pageSrc.lSrc.GetCurrentItem()
+			delSrc()
+			pageSrc.lSrc.Clear()
+			setFileSrc(pageProTree.trPro.GetCurrentNode().GetReference().(int))
+			if pageSrc.lSrc.GetItemCount() > curPos {
+				pageSrc.lSrc.SetCurrentItem(curPos)
+			}
+		}
+
+		return event
+	})
+
 	pageSrc.mPosId = make(map[int]int)
 
 	pageSrc.Flex = tview.NewFlex().SetDirection(tview.FlexColumn).
@@ -64,8 +79,8 @@ func setFileSrc(idFile int) {
 	for lines.Next() {
 		posNum++
 		var id sql.NullInt64
-		var line, comment sql.NullString
 
+		var line, comment sql.NullString
 		err := lines.Scan(&id, &line, &comment)
 		check(err)
 
@@ -77,4 +92,14 @@ func setFileSrc(idFile int) {
 	lines.Close()
 
 	log.Println("-------------------------------")
+}
+
+func delSrc() {
+	log.Println("delSrc")
+	query := `DELETE FROM src
+			  WHERE id = ` + strconv.Itoa(pageSrc.mPosId[pageSrc.lSrc.GetCurrentItem()])
+
+	log.Println(query)
+	_, err := database.Exec(query)
+	check(err)
 }

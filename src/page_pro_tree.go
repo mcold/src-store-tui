@@ -185,6 +185,8 @@ func setObjExec(id int) {
 				from obj
 			   where id = ` + strconv.Itoa(id)
 
+	log.Println(query)
+
 	obj := database.QueryRow(query)
 	check(obj.Err())
 

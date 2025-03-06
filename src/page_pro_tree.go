@@ -39,6 +39,20 @@ func (pageProTree *pageProTreeType) build() {
 
 	pageProTree.trPro.SetRoot(pageProTree.rootPro)
 
+	pageProTree.trPro.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		log.Println(event.Key())
+		if event.Key() == tcell.KeyDelete {
+			log.Println("DELETE")
+			delObj(pageProTree.trPro.GetCurrentNode().GetReference().(int))
+			pageProTree.rootPro.ClearChildren()
+			setTreePro(pagePro.lPro.GetCurrentItem())
+			setProComment()
+			pageObjDesc.descArea.SetText("", true)
+		}
+
+		return event
+	})
+
 	pageProTree.rootPro.SetExpanded(true)
 
 	pageObjDesc.Flex.SetFocusFunc(func() {
@@ -197,5 +211,33 @@ func setObjExec(id int) {
 
 	pageExec.execArea.SetText(exec.String, true)
 	pageExec.outArea.SetText(output.String, true)
+
+}
+
+func delObj(idObj int) {
+	log.Println("-------------------------------")
+	log.Println("delObj")
+	log.Println("--------------------")
+
+	queryObj := `DELETE FROM obj
+			    WHERE id = ` + strconv.Itoa(idObj)
+
+	log.Println(queryObj)
+	_, err := database.Exec(queryObj)
+	check(err)
+
+	querySrc := `DELETE FROM src
+			    WHERE id_file = ` + strconv.Itoa(idObj)
+
+	log.Println(querySrc)
+	_, err = database.Exec(querySrc)
+	check(err)
+
+	// TODO
+	// bad decision but I don't know how to do it better for now
+	// cause of lock database in cycle
+	for i := 0; i < 10; i++ {
+		delAbsParent()
+	}
 
 }

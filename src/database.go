@@ -41,7 +41,35 @@ func check(err interface{}) {
 		_, fileName, lineNo, _ := runtime.Caller(1) // Получаем информацию о вызывающем файле
 		log.Printf("%s: %d\n", filepath.Base(fileName), lineNo)
 		log.Println(err)
-		
+
 		panic(err)
 	}
+}
+
+func delAbsParent() {
+	queryParent := `DELETE FROM obj
+					 WHERE id_parent not in (select id
+											   from obj)`
+
+	log.Println(queryParent)
+	_, err := database.Exec(queryParent)
+	check(err)
+
+	queryObj := `DELETE FROM obj
+			    WHERE id_prj is null
+                   or id_prj not in (select id
+                        				from prj)`
+
+	log.Println(queryObj)
+	_, err = database.Exec(queryObj)
+	check(err)
+
+	querySrc := `DELETE FROM src
+			    WHERE id_file is null
+                   or id_file not in (select id
+                        				from obj)`
+
+	log.Println(querySrc)
+	_, err = database.Exec(querySrc)
+	check(err)
 }

@@ -121,7 +121,6 @@ func delPro(idPro int) {
 	querySrc := `DELETE FROM src
 			    WHERE id_prj = ` + strconv.Itoa(idPro)
 
-	log.Println("delPro", querySrc)
 	_, err := database.Exec(querySrc)
 	check(err)
 

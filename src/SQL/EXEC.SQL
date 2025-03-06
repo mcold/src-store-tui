@@ -19,7 +19,8 @@ CREATE TABLE IF NOT EXISTS OBJ
     tags 		varchar,
     exec        varchar,
     output      varchar,
-    FOREIGN KEY (id_prj) REFERENCES PRJ (id)
+    FOREIGN KEY (id_prj) REFERENCES PRJ (id) ON DELETE CASCADE,
+    FOREIGN KEY (id_parent) REFERENCES OBJ (id) ON DELETE CASCADE
     );
 
 
@@ -33,5 +34,5 @@ CREATE TABLE IF NOT EXISTS SRC
     comment 	varchar,
     tags 		varchar,
     todo        boolean default False,
-    FOREIGN KEY (id_file) REFERENCES OBJ (id)
+    FOREIGN KEY (id_file) REFERENCES OBJ (id) ON DELETE CASCADE
     );

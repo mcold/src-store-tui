@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"log"
 	_ "modernc.org/sqlite"
+	"os"
 	"path/filepath"
 	"runtime"
 )
@@ -21,7 +22,7 @@ func (database *databaseType) buildConnectionString() {
 }
 
 func (database *databaseType) Connect() error {
-	db, err := sql.Open("sqlite", "DB.db")
+	db, err := sql.Open("sqlite", os.Args[1]+".db")
 	check(err)
 
 	if err != nil {

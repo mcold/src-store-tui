@@ -30,8 +30,18 @@ func (pagePro *pageProType) build() {
 	pagePro.lPro.SetBorder(true)
 	pagePro.lPro.SetBorderColor(tcell.ColorBlue)
 	pagePro.lPro.SetBorderColor(tcell.ColorBlue)
+	pagePro.lPro.SetBorderPadding(1, 1, 1, 1)
 
 	setListPro()
+
+	if pagePro.lPro.GetItemCount() > 0 {
+		pagePro.lPro.SetCurrentItem(0)
+		pagePro.Pages.SwitchToPage("proTree")
+		pageProTree.rootPro.ClearChildren()
+
+		setTreePro(0)
+		setProComment()
+	}
 
 	pagePro.lPro.SetSelectedFunc(func(pos int, _ string, _ string, _ rune) {
 

@@ -102,3 +102,8 @@ func saveExec() {
 	log.Println("-------------------------------")
 
 }
+
+func (pageExec *pageExecType) show() {
+	pageProTree.Pages.SwitchToPage("exec")
+	app.SetFocus(pageExec.Flex)
+}

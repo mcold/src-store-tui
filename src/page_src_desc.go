@@ -64,3 +64,8 @@ func saveSrcDesc() {
 	log.Println("-------------------------------")
 
 }
+
+func (pageSrcDesc *pageSrcDescType) show() {
+	pageProTree.Pages.SwitchToPage("proSrcDesc")
+	app.SetFocus(pageSrcDesc.Flex)
+}

@@ -103,3 +103,8 @@ func delSrc() {
 	_, err := database.Exec(query)
 	check(err)
 }
+
+func (pageSrc *pageSrcType) show() {
+	pageProTree.Pages.SwitchToPage("src")
+	app.SetFocus(pageSrc.Flex)
+}

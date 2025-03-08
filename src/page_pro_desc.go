@@ -30,12 +30,15 @@ func (pageProDesc *pageProDescType) build() {
 		SetTitleAlign(tview.AlignLeft)
 
 	pageProDesc.descArea.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-
 		if event.Rune() == 's' && event.Modifiers() == tcell.ModAlt {
 			saveProDesc()
 			pageProDesc.descArea.SetText("", true)
 			pagePro.Pages.SwitchToPage("proTree")
 			return nil
+		}
+		if event.Key() == tcell.KeyEsc {
+			pageProTree.Pages.SwitchToPage("src")
+			app.SetFocus(pageSrc.Flex)
 		}
 		return event
 	})
@@ -54,5 +57,12 @@ func saveProDesc() {
 	_, err := database.Exec(query, "PRAGMA busy_timeout=30000;")
 
 	check(err)
+
+}
+
+func (pageProDesc *pageProDescType) show() {
+	pagePro.Pages.SwitchToPage("proDesc")
+	setProComment()
+	app.SetFocus(pageProDesc.Flex)
 
 }

@@ -39,6 +39,12 @@ func (pageProTree *pageProTreeType) build() {
 
 	pageProTree.trPro.SetRoot(pageProTree.rootPro)
 
+	pageProTree.trPro.SetTopLevel(1)
+
+	pageProTree.trPro.SetSelectedFunc(func(node *tview.TreeNode) {
+		app.SetFocus(pageSrc.Flex)
+	})
+
 	pageProTree.trPro.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		log.Println(event.Key())
 		if event.Key() == tcell.KeyDelete {
@@ -64,10 +70,8 @@ func (pageProTree *pageProTreeType) build() {
 	})
 
 	pageProTree.Flex = tview.NewFlex().SetDirection(tview.FlexColumn).
-		AddItem(pageProTree.trPro, 0, 1, true).
-		AddItem(pageProTree.Pages, 0, 3, false)
-
-	//pageProTree.Flex.SetBorder(true).SetBorderColor(tcell.ColorBlue).
+		AddItem(pageProTree.trPro, 0, 4, true).
+		AddItem(pageProTree.Pages, 0, 7, false)
 
 	pageProTree.Flex.SetTitle("F3/F4").
 		SetTitleAlign(tview.AlignLeft)
@@ -129,7 +133,6 @@ func setTreePro(pos int) {
 		}
 
 		pageProTree.rootPro.AddChild(objNode)
-		//pageProTree.mObjType[strconv.Itoa(int(id.Int64))+fileName.String] = "file"
 	}
 
 	objects.Close()
@@ -240,4 +243,9 @@ func delObj(idObj int) {
 		delAbsParent()
 	}
 
+}
+
+func (pageProTree *pageProTreeType) show() {
+	pagePro.Pages.SwitchToPage("proTree")
+	app.SetFocus(pageProTree.trPro)
 }

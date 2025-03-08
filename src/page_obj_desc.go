@@ -55,3 +55,8 @@ func saveObjDesc() {
 	check(err)
 
 }
+
+func (pageObjDesc *pageObjDescType) show() {
+	pageProTree.Pages.SwitchToPage("proObjDesc")
+	app.SetFocus(pageObjDesc.Flex)
+}

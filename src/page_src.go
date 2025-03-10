@@ -47,13 +47,13 @@ func (pageSrc *pageSrcType) build() {
 		return event
 	})
 
+	pageSrc.lSrc.SetTitle("F5/F6").
+		SetTitleAlign(tview.AlignLeft)
+
 	pageSrc.mPosId = make(map[int]int)
 
 	pageSrc.Flex = tview.NewFlex().SetDirection(tview.FlexColumn).
 		AddItem(pageSrc.lSrc, 0, 1, true)
-
-	pageSrc.Flex.SetTitle("F5/F6").
-		SetTitleAlign(tview.AlignLeft)
 
 	pageProTree.Pages.AddPage("src", pageSrc.lSrc, true, true)
 }

@@ -21,9 +21,10 @@ func (pageExec *pageExecType) build() {
 	pageExec.execArea = tview.NewTextArea()
 
 	pageExec.execArea.
-		SetTitleAlign(tview.AlignLeft).
-		SetBorderPadding(2, 1, 2, 1).
+		SetBorderPadding(2, 2, 2, 2).
 		SetBackgroundColor(tcell.ColorBlue)
+
+	pageExec.execArea.SetBorderColor(tcell.ColorBlue)
 
 	pageExec.execArea.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 
@@ -41,7 +42,7 @@ func (pageExec *pageExecType) build() {
 			clipBoardContent, err := clipboard.ReadAll()
 			check(err)
 
-			pageExec.execArea.SetText(clipBoardContent, true)
+			pageExec.execArea.SetText(pageExec.execArea.GetText()+clipBoardContent, true)
 		}
 		return event
 	})
@@ -49,9 +50,10 @@ func (pageExec *pageExecType) build() {
 	pageExec.outArea = tview.NewTextArea()
 
 	pageExec.outArea.
-		SetTitleAlign(tview.AlignLeft).
-		SetBorderPadding(2, 2, 1, 1).
+		SetBorderPadding(2, 2, 2, 2).
 		SetBackgroundColor(tcell.ColorBlue)
+
+	pageExec.outArea.SetBorderColor(tcell.ColorBlue)
 
 	pageExec.outArea.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 
@@ -69,7 +71,7 @@ func (pageExec *pageExecType) build() {
 			clipBoardContent, err := clipboard.ReadAll()
 			check(err)
 
-			pageExec.outArea.SetText(clipBoardContent, true)
+			pageExec.outArea.SetText(pageExec.outArea.GetText()+clipBoardContent, true)
 		}
 		return event
 	})
@@ -77,9 +79,6 @@ func (pageExec *pageExecType) build() {
 	pageExec.Flex = tview.NewFlex().SetDirection(tview.FlexRow).
 		AddItem(pageExec.execArea, 0, 1, true).
 		AddItem(pageExec.outArea, 0, 1, true)
-
-	pageExec.Flex.SetTitle("F6").
-		SetTitleAlign(tview.AlignLeft)
 
 	pageProTree.Pages.AddPage("exec", pageExec.Flex, true, false)
 }

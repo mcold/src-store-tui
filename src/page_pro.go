@@ -24,13 +24,15 @@ func (pagePro *pageProType) build() {
 
 	pagePro.mPosId = make(map[int]int)
 
-	// list
 	pagePro.lPro = tview.NewList()
 
-	pagePro.lPro.SetBorder(true)
-	pagePro.lPro.SetBorderColor(tcell.ColorBlue)
-	pagePro.lPro.SetBorderColor(tcell.ColorBlue)
-	pagePro.lPro.SetBorderPadding(1, 1, 1, 1)
+	pagePro.lPro.SetBorder(true).
+		SetBorderColor(tcell.ColorBlue).
+		SetBorderColor(tcell.ColorBlue).
+		SetBorderPadding(1, 1, 1, 1)
+
+	pagePro.lPro.SetTitle("F2").
+		SetTitleAlign(tview.AlignLeft)
 
 	setListPro()
 
@@ -67,15 +69,10 @@ func (pagePro *pageProType) build() {
 		AddItem(pagePro.lPro, 0, 1, true).
 		AddItem(pagePro.Pages, 0, 4, true)
 
-	flexPro.SetBorder(true).SetBorderColor(tcell.ColorBlue).
-		SetTitle("F2").
-		SetTitleAlign(tview.AlignLeft)
-
 	pageMain.pages.AddPage("pro", flexPro, true, true)
 
 }
 
-// fulfill project list
 func setListPro() {
 	log.Println("-------------------------------")
 	log.Println("setListPro")

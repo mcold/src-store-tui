@@ -41,6 +41,9 @@ func (pageProTree *pageProTreeType) build() {
 
 	pageProTree.trPro.SetTopLevel(1)
 
+	pageProTree.trPro.SetTitle("F3/F4").
+		SetTitleAlign(tview.AlignLeft)
+
 	pageProTree.trPro.SetSelectedFunc(func(node *tview.TreeNode) {
 		app.SetFocus(pageSrc.Flex)
 	})
@@ -72,9 +75,6 @@ func (pageProTree *pageProTreeType) build() {
 	pageProTree.Flex = tview.NewFlex().SetDirection(tview.FlexColumn).
 		AddItem(pageProTree.trPro, 0, 4, true).
 		AddItem(pageProTree.Pages, 0, 7, false)
-
-	pageProTree.Flex.SetTitle("F3/F4").
-		SetTitleAlign(tview.AlignLeft)
 
 	pagePro.Pages.AddPage("proTree", pageProTree.Flex, true, true)
 

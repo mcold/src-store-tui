@@ -9,14 +9,18 @@ import (
 )
 
 type pageSrcType struct {
-	lSrc   *tview.List
-	mPosId map[int]int
+	lSrc     *tview.List
+	descArea *tview.TextArea
+	bDesc    bool
+	mPosId   map[int]int
 	*tview.Flex
 }
 
 var pageSrc pageSrcType
 
 func (pageSrc *pageSrcType) build() {
+
+	pageSrc.bDesc = false
 
 	pageSrc.lSrc = tview.NewList()
 
@@ -28,11 +32,28 @@ func (pageSrc *pageSrcType) build() {
 
 	pageSrc.lSrc.SetSelectedBackgroundColor(tcell.ColorOrange)
 
+	pageSrc.lSrc.SetTitle("F5/F6").
+		SetTitleAlign(tview.AlignLeft)
+
+	pageSrc.descArea = tview.NewTextArea()
+	pageSrc.descArea.SetBorderColor(tcell.ColorBlue)
+	pageSrc.descArea.SetBorderPadding(1, 1, 1, 1)
+	pageSrc.descArea.SetBorder(true).
+		SetBorderPadding(1, 1, 1, 1).
+		SetBorderColor(tcell.ColorBlue).
+		SetTitle("comment").
+		SetTitleAlign(tview.AlignLeft)
+
 	pageSrc.lSrc.SetSelectedFunc(func(i int, s string, s2 string, r rune) {
-		pageSrcDesc.descArea.SetText(s2, true)
+		pageSrc.descArea.SetText(s2, true)
 	})
 
-	pageSrc.lSrc.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+	pageSrc.mPosId = make(map[int]int)
+
+	pageSrc.Flex = tview.NewFlex().SetDirection(tview.FlexRow).
+		AddItem(pageSrc.lSrc, 0, 10, true)
+
+	pageSrc.Flex.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 
 		if event.Key() == tcell.KeyDelete {
 			curPos := pageSrc.lSrc.GetCurrentItem()
@@ -43,19 +64,54 @@ func (pageSrc *pageSrcType) build() {
 				pageSrc.lSrc.SetCurrentItem(curPos)
 			}
 		}
+		if event.Key() == tcell.KeyCtrlQ {
+			if pageSrc.bDesc {
+				pageSrc.bDesc = false
+				curPos := pageSrc.lSrc.GetCurrentItem()
+				saveSrc()
+				pageSrc.Flex.RemoveItem(pageSrc.descArea)
+				pageSrc.show()
+				pageSrc.lSrc.SetCurrentItem(curPos)
+			} else {
+				pageSrc.bDesc = true
+				setSrc()
+				pageSrc.Flex.AddItem(pageSrc.descArea, 0, 1, false)
+				app.SetFocus(pageSrc.descArea)
+			}
+
+		}
+
+		//if event.Key() == tcell.KeyCtrlW {
+		//	if pageSrc.bName {
+		//		if pageSrc.bDesc {
+		//			pageSrc.bDesc = false
+		//			curPos := pageSrc.lSrc.GetCurrentItem()
+		//			saveSrc()
+		//			pageSrc.Flex.RemoveItem(pageSrc.descArea)
+		//			pageSrc.show()
+		//			pageSrc.lSrc.SetCurrentItem(curPos)
+		//		}
+		//		pageSrc.bName = false
+		//		curPos := pageSrc.lSrc.GetCurrentItem()
+		//		saveSrc()
+		//		pageSrc.Flex.RemoveItem(pageSrc.nameArea)
+		//		pageSrc.show()
+		//		pageSrc.lSrc.SetCurrentItem(curPos)
+		//	} else {
+		//		pageSrc.bName = true
+		//		//sName := pageSrc.nameArea.GetText()
+		//		pageSrc.Flex.AddItem(pageSrc.nameArea, 0, 1, false)
+		//		//pageSrc.nameArea.SetText(sName, true)
+		//		setSrc()
+		//		app.SetFocus(pageSrc.nameArea)
+		//	}
+		//
+		//}
 
 		return event
 	})
 
-	pageSrc.lSrc.SetTitle("F5/F6").
-		SetTitleAlign(tview.AlignLeft)
-
-	pageSrc.mPosId = make(map[int]int)
-
-	pageSrc.Flex = tview.NewFlex().SetDirection(tview.FlexColumn).
-		AddItem(pageSrc.lSrc, 0, 1, true)
-
-	pageProTree.Pages.AddPage("src", pageSrc.lSrc, true, true)
+	pageProTree.Pages.AddPage("src", pageSrc.Flex, true, true)
 }
 
 func setFileSrc(idFile int) {
@@ -105,6 +161,47 @@ func delSrc() {
 }
 
 func (pageSrc *pageSrcType) show() {
+	pageSrc.bDesc = false
 	pageProTree.Pages.SwitchToPage("src")
+	pageSrc.lSrc.Clear()
+	setFileSrc(pageProTree.trPro.GetCurrentNode().GetReference().(int))
 	app.SetFocus(pageSrc.Flex)
+}
+
+func saveSrc() {
+	log.Println("-------------------------------")
+	log.Println("saveSrc")
+	log.Println("---------------------")
+
+	query := "UPDATE src" + "\n" +
+		"SET comment = '" + pageSrc.descArea.GetText() + "'\n" +
+		"WHERE id = " + strconv.Itoa(pageSrc.mPosId[pageSrc.lSrc.GetCurrentItem()])
+
+	log.Println(query)
+
+	_, err := database.Exec(query)
+	check(err)
+
+	log.Println("-------------------------------")
+
+}
+
+func setSrc() {
+	log.Println("-------------------------------")
+	log.Println("setObjDesc")
+	query := `select line
+       				 , comment
+				from src` +
+		` where id = ` + strconv.Itoa(pageSrc.mPosId[pageSrc.lSrc.GetCurrentItem()])
+
+	src, err := database.Query(query)
+	check(err)
+
+	src.Next()
+	var line, comment sql.NullString
+	err = src.Scan(&line, &comment)
+	pageSrc.descArea.SetText(comment.String, true)
+	src.Close()
+
+	log.Println("-------------------------------")
 }

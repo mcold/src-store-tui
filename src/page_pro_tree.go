@@ -23,7 +23,6 @@ func (pageProTree *pageProTreeType) build() {
 	pageProTree.Pages = tview.NewPages()
 	pageSrc.build()
 	pageObjDesc.build()
-	pageSrcDesc.build()
 	pageExec.build()
 
 	pageProTree.curFolderID = 0
@@ -66,10 +65,6 @@ func (pageProTree *pageProTreeType) build() {
 
 	pageObjDesc.Flex.SetFocusFunc(func() {
 		app.SetFocus(pageObjDesc.descArea)
-	})
-
-	pageSrcDesc.Flex.SetFocusFunc(func() {
-		app.SetFocus(pageSrcDesc.descArea)
 	})
 
 	pageProTree.Flex = tview.NewFlex().SetDirection(tview.FlexColumn).

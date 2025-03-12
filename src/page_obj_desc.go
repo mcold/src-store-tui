@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"log"
@@ -26,9 +27,12 @@ func (pageObjDesc *pageObjDescType) build() {
 	pageObjDesc.descArea.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 
 		if event.Rune() == 's' && event.Modifiers() == tcell.ModAlt {
-			saveProDesc()
+			saveObjDesc()
 			pageObjDesc.descArea.SetText("", true)
 			pageProTree.Pages.SwitchToPage("src")
+			if pageSrc.lSrc.GetItemCount() > 0 {
+				pageSrc.lSrc.SetCurrentItem(1)
+			}
 			return nil
 		}
 		return event
@@ -44,10 +48,11 @@ func (pageObjDesc *pageObjDescType) build() {
 }
 
 func saveObjDesc() {
+	log.Println("saveObjDesc")
 
-	query := "UPDATE prj" + "\n" +
-		"SET comment = '" + pageProDesc.descArea.GetText() + "'\n" +
-		"WHERE id = " + strconv.Itoa(pagePro.mPosId[pagePro.lPro.GetCurrentItem()])
+	query := "UPDATE obj" + "\n" +
+		"SET comment = '" + pageObjDesc.descArea.GetText() + "'\n" +
+		"WHERE id = " + strconv.Itoa(pageProTree.trPro.GetCurrentNode().GetReference().(int))
 
 	log.Println(query)
 
@@ -57,6 +62,27 @@ func saveObjDesc() {
 }
 
 func (pageObjDesc *pageObjDescType) show() {
+	setObjDesc()
 	pageProTree.Pages.SwitchToPage("proObjDesc")
 	app.SetFocus(pageObjDesc.Flex)
+}
+
+func setObjDesc() {
+	log.Println("-------------------------------")
+	log.Println("setObjDesc")
+	query := `select comment
+				from obj` +
+		` where id = ` + strconv.Itoa(pageProTree.trPro.GetCurrentNode().GetReference().(int))
+
+	obj, err := database.Query(query)
+	check(err)
+
+	obj.Next()
+	var comment sql.NullString
+	err = obj.Scan(&comment)
+
+	pageObjDesc.descArea.SetText(comment.String, true)
+	obj.Close()
+
+	log.Println("-------------------------------")
 }

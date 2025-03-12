@@ -47,8 +47,6 @@ func (application *applicationType) registerGlobalShortcuts() {
 			pageObjDesc.show()
 		case tcell.KeyF10:
 			pageExec.show()
-		case tcell.KeyF11:
-			pageSrcDesc.show()
 		default:
 			return event
 		}

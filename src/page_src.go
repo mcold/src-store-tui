@@ -6,13 +6,16 @@ import (
 	"github.com/rivo/tview"
 	"log"
 	"strconv"
+	"strings"
 )
 
 type pageSrcType struct {
 	lSrc     *tview.List
 	descArea *tview.TextArea
 	bDesc    bool
+	bName    bool
 	mPosId   map[int]int
+	curPos   int
 	*tview.Flex
 }
 
@@ -21,6 +24,7 @@ var pageSrc pageSrcType
 func (pageSrc *pageSrcType) build() {
 
 	pageSrc.bDesc = false
+	pageSrc.bName = false
 
 	pageSrc.lSrc = tview.NewList()
 
@@ -44,8 +48,17 @@ func (pageSrc *pageSrcType) build() {
 		SetTitle("comment").
 		SetTitleAlign(tview.AlignLeft)
 
+	pageSrc.descArea.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyEsc {
+			removeSrcDesc()
+			return nil
+		}
+		return event
+	})
+
 	pageSrc.lSrc.SetSelectedFunc(func(i int, s string, s2 string, r rune) {
 		pageSrc.descArea.SetText(s2, true)
+		pageSrc.curPos = pageSrc.lSrc.GetCurrentItem()
 	})
 
 	pageSrc.mPosId = make(map[int]int)
@@ -56,57 +69,46 @@ func (pageSrc *pageSrcType) build() {
 	pageSrc.Flex.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 
 		if event.Key() == tcell.KeyDelete {
-			curPos := pageSrc.lSrc.GetCurrentItem()
 			delSrc()
 			pageSrc.lSrc.Clear()
 			setFileSrc(pageProTree.trPro.GetCurrentNode().GetReference().(int))
-			if pageSrc.lSrc.GetItemCount() > curPos {
-				pageSrc.lSrc.SetCurrentItem(curPos)
+			if pageSrc.lSrc.GetItemCount() > pageSrc.curPos {
+				pageSrc.lSrc.SetCurrentItem(pageSrc.curPos)
 			}
 		}
 		if event.Key() == tcell.KeyCtrlQ {
 			if pageSrc.bDesc {
-				pageSrc.bDesc = false
-				curPos := pageSrc.lSrc.GetCurrentItem()
-				saveSrc()
-				pageSrc.Flex.RemoveItem(pageSrc.descArea)
-				pageSrc.show()
-				pageSrc.lSrc.SetCurrentItem(curPos)
+				saveSrcDescCtrl()
 			} else {
+				if pageSrc.bName {
+					saveSrcLineCtrl()
+				}
 				pageSrc.bDesc = true
-				setSrc()
+				pageSrc.descArea.SetTitle("comment")
+
+				_, desc := pageSrc.lSrc.GetItemText(pageSrc.curPos)
+				pageSrc.descArea.SetText(strings.TrimSpace(desc)+" ", true)
+
 				pageSrc.Flex.AddItem(pageSrc.descArea, 0, 1, false)
 				app.SetFocus(pageSrc.descArea)
 			}
 
 		}
+		if event.Key() == tcell.KeyCtrlW {
+			if pageSrc.bName {
+				saveSrcLineCtrl()
+			} else {
+				if pageSrc.bDesc {
+					saveSrcDescCtrl()
+				}
+				pageSrc.bName = true
+				pageSrc.descArea.SetTitle("name")
+				setSrcLine()
+				pageSrc.Flex.AddItem(pageSrc.descArea, 0, 1, true)
+				app.SetFocus(pageSrc.descArea)
+			}
 
-		//if event.Key() == tcell.KeyCtrlW {
-		//	if pageSrc.bName {
-		//		if pageSrc.bDesc {
-		//			pageSrc.bDesc = false
-		//			curPos := pageSrc.lSrc.GetCurrentItem()
-		//			saveSrc()
-		//			pageSrc.Flex.RemoveItem(pageSrc.descArea)
-		//			pageSrc.show()
-		//			pageSrc.lSrc.SetCurrentItem(curPos)
-		//		}
-		//		pageSrc.bName = false
-		//		curPos := pageSrc.lSrc.GetCurrentItem()
-		//		saveSrc()
-		//		pageSrc.Flex.RemoveItem(pageSrc.nameArea)
-		//		pageSrc.show()
-		//		pageSrc.lSrc.SetCurrentItem(curPos)
-		//	} else {
-		//		pageSrc.bName = true
-		//		//sName := pageSrc.nameArea.GetText()
-		//		pageSrc.Flex.AddItem(pageSrc.nameArea, 0, 1, false)
-		//		//pageSrc.nameArea.SetText(sName, true)
-		//		setSrc()
-		//		app.SetFocus(pageSrc.nameArea)
-		//	}
-		//
-		//}
+		}
 
 		return event
 	})
@@ -153,7 +155,7 @@ func setFileSrc(idFile int) {
 func delSrc() {
 	log.Println("delSrc")
 	query := `DELETE FROM src
-			  WHERE id = ` + strconv.Itoa(pageSrc.mPosId[pageSrc.lSrc.GetCurrentItem()])
+			  WHERE id = ` + strconv.Itoa(pageSrc.mPosId[pageSrc.curPos])
 
 	log.Println(query)
 	_, err := database.Exec(query)
@@ -162,6 +164,7 @@ func delSrc() {
 
 func (pageSrc *pageSrcType) show() {
 	pageSrc.bDesc = false
+	pageSrc.bName = false
 	pageProTree.Pages.SwitchToPage("src")
 	pageSrc.lSrc.Clear()
 	setFileSrc(pageProTree.trPro.GetCurrentNode().GetReference().(int))
@@ -173,10 +176,16 @@ func saveSrc() {
 	log.Println("saveSrc")
 	log.Println("---------------------")
 
-	query := "UPDATE src" + "\n" +
-		"SET comment = '" + pageSrc.descArea.GetText() + "'\n" +
-		"WHERE id = " + strconv.Itoa(pageSrc.mPosId[pageSrc.lSrc.GetCurrentItem()])
-
+	var query string
+	if pageSrc.bDesc {
+		query = "UPDATE src" + "\n" +
+			"SET comment = '" + pageSrc.descArea.GetText() + "'\n" +
+			"WHERE id = " + strconv.Itoa(pageSrc.mPosId[pageSrc.curPos])
+	} else if pageSrc.bName {
+		query = "UPDATE src" + "\n" +
+			"SET line = '" + strings.TrimSpace(pageSrc.descArea.GetText()) + "'\n" +
+			"WHERE id = " + strconv.Itoa(pageSrc.mPosId[pageSrc.curPos])
+	}
 	log.Println(query)
 
 	_, err := database.Exec(query)
@@ -186,22 +195,53 @@ func saveSrc() {
 
 }
 
-func setSrc() {
+func setSrcLine() {
 	log.Println("-------------------------------")
-	log.Println("setObjDesc")
+	log.Println("setSrcLine")
 	query := `select line
-       				 , comment
 				from src` +
-		` where id = ` + strconv.Itoa(pageSrc.mPosId[pageSrc.lSrc.GetCurrentItem()])
+		` where id = ` + strconv.Itoa(pageSrc.mPosId[pageSrc.curPos])
+
+	log.Println(query)
 
 	src, err := database.Query(query)
 	check(err)
 
 	src.Next()
-	var line, comment sql.NullString
-	err = src.Scan(&line, &comment)
-	pageSrc.descArea.SetText(comment.String, true)
+	var line sql.NullString
+	err = src.Scan(&line)
+	// TODO: added mask - cause trim last token - I don't know why
+	pageSrc.descArea.SetText(line.String+" <mask>\n", true)
 	src.Close()
 
 	log.Println("-------------------------------")
+}
+
+func saveSrcDescCtrl() {
+	saveSrc()
+	pageSrc.bDesc = false
+	pageSrc.Flex.RemoveItem(pageSrc.descArea)
+	pageSrc.show()
+	pageSrc.lSrc.SetCurrentItem(pageSrc.curPos)
+}
+
+func saveSrcLineCtrl() {
+	saveSrc()
+	pageSrc.bName = false
+	pageSrc.Flex.RemoveItem(pageSrc.descArea)
+	pageSrc.show()
+	pageSrc.lSrc.SetCurrentItem(pageSrc.curPos)
+}
+
+func removeSrcDesc() {
+	if pageSrc.bName {
+		saveSrcLineCtrl()
+		pageSrc.bName = false
+		return
+	}
+	if pageSrc.bDesc {
+		saveSrcDescCtrl()
+		pageSrc.bDesc = false
+		return
+	}
 }

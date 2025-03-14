@@ -38,6 +38,7 @@ func (application *applicationType) registerGlobalShortcuts() {
 		case tcell.KeyF2:
 			app.SetFocus(pagePro.lPro)
 		case tcell.KeyF3:
+			removeSrcDesc()
 			pageProTree.show()
 		case tcell.KeyF4:
 			pageProDesc.show()

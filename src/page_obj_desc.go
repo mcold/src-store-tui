@@ -82,6 +82,7 @@ func setObjDesc() {
 	err = obj.Scan(&comment)
 
 	pageObjDesc.descArea.SetText(comment.String, true)
+	pageProTree.descArea.SetText(comment.String, true)
 	obj.Close()
 
 	log.Println("-------------------------------")

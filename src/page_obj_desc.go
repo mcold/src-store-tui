@@ -85,5 +85,15 @@ func setObjDesc() {
 	pageProTree.descArea.SetText(comment.String, true)
 	obj.Close()
 
+	if len(comment.String) > 0 {
+		pageProTree.descArea.SetText(comment.String, true)
+		if pageProTree.descArea.GetDisabled() == true {
+			pageProTree.descArea.SetDisabled(false)
+			pageProTree.flTree.AddItem(pageProTree.descArea, 0, 3, false)
+		}
+	} else {
+		pageProTree.flTree.RemoveItem(pageProTree.descArea)
+	}
+
 	log.Println("-------------------------------")
 }

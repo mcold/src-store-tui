@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"github.com/atotto/clipboard"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -102,7 +103,31 @@ func saveExec() {
 
 }
 
+func setExec() {
+	log.Println("-------------------------------")
+	log.Println("setSrcLine")
+	query := `select exec
+					, output
+				from obj` +
+		` where id = ` + strconv.Itoa(pageProTree.trPro.GetCurrentNode().GetReference().(int))
+
+	log.Println(query)
+
+	obj, err := database.Query(query)
+	check(err)
+
+	obj.Next()
+	var exec, output sql.NullString
+	err = obj.Scan(&exec, &output)
+	pageExec.execArea.SetText(exec.String, true)
+	pageExec.outArea.SetText(output.String, true)
+	obj.Close()
+
+	log.Println("-------------------------------")
+}
+
 func (pageExec *pageExecType) show() {
+	setExec()
 	pageProTree.Pages.SwitchToPage("exec")
 	app.SetFocus(pageExec.Flex)
 }

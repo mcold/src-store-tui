@@ -2,20 +2,20 @@ package main
 
 import (
 	"database/sql"
-	"github.com/gdamore/tcell/v2"
-	"github.com/rivo/tview"
 	"log"
 	"strconv"
 	"strings"
+
+	"github.com/gdamore/tcell/v2"
+	"github.com/rivo/tview"
 )
 
 type pageProTreeType struct {
 	trPro       *tview.TreeView
 	rootPro     *tview.TreeNode
 	descArea    *tview.TextArea
+	nameArea    *tview.TextArea
 	curFolderID int
-	bDesc       bool
-	bName       bool
 	flTree      *tview.Flex
 	*tview.Flex
 	*tview.Pages
@@ -24,9 +24,6 @@ type pageProTreeType struct {
 var pageProTree pageProTreeType
 
 func (pageProTree *pageProTreeType) build() {
-
-	pageSrc.bDesc = false
-	pageSrc.bName = false
 
 	pageProTree.Pages = tview.NewPages()
 	pageSrc.build()
@@ -80,6 +77,8 @@ func (pageProTree *pageProTreeType) build() {
 	pageProTree.descArea = tview.NewTextArea()
 	pageProTree.descArea.SetBorderColor(tcell.ColorBlue)
 	pageProTree.descArea.SetBorderPadding(1, 1, 1, 1)
+	pageProTree.descArea.SetDisabled(true)
+
 	pageProTree.descArea.SetBorder(true).
 		SetBorderPadding(1, 1, 1, 1).
 		SetBorderColor(tcell.ColorBlue).
@@ -88,7 +87,31 @@ func (pageProTree *pageProTreeType) build() {
 
 	pageProTree.descArea.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyEsc {
-			removeObjDesc()
+			saveObjDescCtrl()
+			pageProTree.flTree.RemoveItem(pageProTree.descArea)
+			app.SetFocus(pageProTree.flTree)
+			return nil
+		}
+		return event
+	})
+
+	pageProTree.nameArea = tview.NewTextArea()
+	pageProTree.nameArea.SetBorderColor(tcell.ColorBlue)
+	pageProTree.nameArea.SetBorderPadding(1, 1, 1, 1)
+	pageProTree.nameArea.SetDisabled(true)
+
+	pageProTree.nameArea.SetBorder(true).
+		SetBorderPadding(1, 1, 1, 1).
+		SetBorderColor(tcell.ColorBlue).
+		SetTitle("name").
+		SetTitleAlign(tview.AlignLeft)
+
+	pageProTree.nameArea.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyEsc {
+			saveObjNameCtrl()
+			pageProTree.trPro.GetCurrentNode().SetText(strings.TrimSpace(pageProTree.nameArea.GetText()))
+			pageProTree.flTree.RemoveItem(pageProTree.nameArea)
+			app.SetFocus(pageProTree.flTree)
 			return nil
 		}
 		return event
@@ -97,47 +120,34 @@ func (pageProTree *pageProTreeType) build() {
 	pageProTree.flTree.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 
 		if event.Key() == tcell.KeyCtrlQ {
-			log.Println("pageProTree.flTree.SetInputCapture")
-			log.Println("KeyCtrlQ")
-			log.Println(pageProTree.descArea.HasFocus())
-			log.Println(pageProTree.bDesc)
-
-			if pageProTree.descArea.HasFocus() == false {
-				if pageProTree.bDesc == false {
-					pageProTree.bDesc = true
-					pageProTree.flTree.AddItem(pageProTree.descArea, 0, 1, false)
-					app.SetFocus(pageProTree.descArea)
-				}
+			if pageProTree.descArea.GetDisabled() == true {
+				pageProTree.descArea.SetTitle("comment")
+				pageProTree.flTree.AddItem(pageProTree.descArea, 0, 1, false)
+				pageProTree.descArea.SetText(getObjDesc(), true)
 				app.SetFocus(pageProTree.descArea)
+				pageProTree.descArea.SetDisabled(false)
 			} else {
-				if pageProTree.bDesc {
-					saveObjDescCtrl()
-				} else {
-					if pageSrc.bName {
-						saveObjNameCtrl()
-					}
-					pageProTree.bDesc = true
-					pageProTree.descArea.SetTitle("comment")
-
-					pageProTree.flTree.AddItem(pageProTree.descArea, 0, 1, false)
-					app.SetFocus(pageProTree.descArea)
-				}
+				saveObjDescCtrl()
+				pageProTree.descArea.SetDisabled(true)
+				pageProTree.flTree.RemoveItem(pageProTree.descArea)
+				app.SetFocus(pageProTree.flTree)
 			}
+
 		}
 		if event.Key() == tcell.KeyCtrlW {
-			if pageSrc.bName {
-				saveObjNameCtrl()
+			if pageProTree.nameArea.GetDisabled() == true {
+				pageProTree.nameArea.SetTitle("name")
+				pageProTree.flTree.AddItem(pageProTree.nameArea, 0, 1, false)
+				pageProTree.nameArea.SetText(pageProTree.trPro.GetCurrentNode().GetText()+" <mask>", true)
+				app.SetFocus(pageProTree.nameArea)
+				pageProTree.nameArea.SetDisabled(false)
 			} else {
-				if pageSrc.bDesc {
-					saveObjDescCtrl()
-				}
-				pageProTree.bName = true
-				pageProTree.descArea.SetTitle("name")
-				setSrcLine()
-				pageProTree.flTree.AddItem(pageProTree.descArea, 0, 1, true)
-				app.SetFocus(pageProTree.descArea)
+				saveObjNameCtrl()
+				pageProTree.trPro.GetCurrentNode().SetText(strings.TrimSpace(pageProTree.nameArea.GetText()))
+				pageProTree.nameArea.SetDisabled(true)
+				pageProTree.flTree.RemoveItem(pageProTree.nameArea)
+				app.SetFocus(pageProTree.flTree)
 			}
-
 		}
 
 		return event
@@ -147,7 +157,6 @@ func (pageProTree *pageProTreeType) build() {
 
 }
 
-// fulfill project tree
 func setTreePro(pos int) {
 	log.Println("-------------------------------")
 	log.Println("setTreePro")
@@ -187,9 +196,8 @@ func setTreePro(pos int) {
 			setFileSrc(int(id.Int64))
 			setObjExec(int(id.Int64))
 			removeSrcDesc()
-			if pageProTree.bName == false {
-				showObjDesc()
-			}
+			showObjDesc()
+
 			pageProTree.Pages.SwitchToPage("src")
 		})
 
@@ -208,6 +216,10 @@ func setTreePro(pos int) {
 	}
 
 	objects.Close()
+
+	if pageSrc.lSrc.GetItemCount() > 0 {
+		pageSrc.lSrc.SetCurrentItem(0)
+	}
 
 	log.Println("-------------------------------")
 }
@@ -322,54 +334,66 @@ func (pageProTree *pageProTreeType) show() {
 	app.SetFocus(pageProTree.trPro)
 }
 
-func saveObj() {
+func saveObjDescCtrl() {
 	log.Println("-------------------------------")
-	log.Println("saveObj")
+	log.Println("saveObjDescCtrl")
 	log.Println("---------------------")
 
+	database.Close()
+	database.Connect()
+
 	var query string
-	if pageProTree.bDesc {
-		query = "UPDATE obj" + "\n" +
-			"SET comment = '" + pageProTree.descArea.GetText() + "'\n" +
-			"WHERE id = " + strconv.Itoa(pageProTree.trPro.GetCurrentNode().GetReference().(int))
-	} else if pageProTree.bName {
-		query = "UPDATE obj" + "\n" +
-			"SET name = '" + strings.TrimSpace(pageProTree.descArea.GetText()) + "'\n" +
-			"WHERE id = " + strconv.Itoa(pageProTree.trPro.GetCurrentNode().GetReference().(int))
-	}
+	query = "UPDATE obj" + "\n" +
+		"SET comment = '" + pageProTree.descArea.GetText() + "'\n" +
+		"WHERE id = " + strconv.Itoa(pageProTree.trPro.GetCurrentNode().GetReference().(int))
 	log.Println(query)
 
 	_, err := database.Exec(query)
 	check(err)
 
+	database.Close()
+	database.Connect()
+
 	log.Println("-------------------------------")
-
-}
-
-func saveObjDescCtrl() {
-	saveObj()
-	pageProTree.bDesc = false
-	pageProTree.flTree.RemoveItem(pageProTree.descArea)
-	app.SetFocus(pageProTree.trPro)
 }
 
 func saveObjNameCtrl() {
-	saveObj()
-	pageProTree.bName = false
-	pageProTree.flTree.RemoveItem(pageProTree.descArea)
+	log.Println("-------------------------------")
+	log.Println("saveObjNameCtrl")
+	log.Println("---------------------")
+
+	var query string
+	query = "UPDATE obj" + "\n" +
+		"SET name = '" + pageProTree.nameArea.GetText() + "'\n" +
+		"WHERE id = " + strconv.Itoa(pageProTree.trPro.GetCurrentNode().GetReference().(int))
+	log.Println(query)
+
+	_, err := database.Exec(query)
+	check(err)
+
+	database.Close()
+	database.Connect()
+
+	log.Println("-------------------------------")
 }
 
-func removeObjDesc() {
-	if pageProTree.bName {
-		saveObjNameCtrl()
-		pageProTree.bName = false
-		return
-	}
-	if pageProTree.bDesc {
-		saveObjDescCtrl()
-		pageProTree.bDesc = false
-		return
-	}
+func getObjDesc() string {
+	query := `select comment
+				from obj` +
+		` where id = ` + strconv.Itoa(pageProTree.trPro.GetCurrentNode().GetReference().(int))
+
+	log.Println(query)
+
+	obj, err := database.Query(query)
+	check(err)
+
+	obj.Next()
+	var comment sql.NullString
+	err = obj.Scan(&comment)
+
+	obj.Close()
+
+	return comment.String
 }
 
 func showObjDesc() {
@@ -387,15 +411,17 @@ func showObjDesc() {
 	obj.Next()
 	var comment sql.NullString
 	err = obj.Scan(&comment)
-	if len(comment.String) > 0 {
-		pageProTree.descArea.SetText(comment.String, true)
-		pageProTree.descArea.SetTitle("comment")
-		pageProTree.flTree.AddItem(pageProTree.descArea, 0, 1, false)
-		pageProTree.bDesc = false
-	} else {
-		pageProTree.flTree.RemoveItem(pageProTree.descArea)
-		pageProTree.bDesc = false
-	}
+	log.Println("comment: ")
+	log.Println(comment.String)
+	//if len(comment.String) > 0 {
+	//	pageProTree.descArea.SetText(comment.String, true)
+	//	if pageProTree.descArea.GetDisabled() == true {
+	//		pageProTree.descArea.SetDisabled(false)
+	//		pageProTree.flTree.AddItem(pageProTree.descArea, 0, 3, false)
+	//	}
+	//} else {
+	//	pageProTree.flTree.RemoveItem(pageProTree.descArea)
+	//}
 
 	obj.Close()
 

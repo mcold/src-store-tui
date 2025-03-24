@@ -57,6 +57,9 @@ func (pageSrc *pageSrcType) build() {
 	})
 
 	pageSrc.lSrc.SetSelectedFunc(func(i int, s string, s2 string, r rune) {
+		log.Println("test output:\n")
+		log.Println(s)
+
 		pageSrc.descArea.SetText(s2, true)
 		pageSrc.curPos = pageSrc.lSrc.GetCurrentItem()
 	})
@@ -143,7 +146,7 @@ func setFileSrc(idFile int) {
 		check(err)
 
 		pageSrc.mPosId[posNum-1] = int(id.Int64)
-		pageSrc.lSrc.AddItem(line.String, comment.String, rune(0), func() {})
+		pageSrc.lSrc.AddItem(strings.ReplaceAll(line.String, "\t", "    "), comment.String, rune(0), func() {})
 
 	}
 
@@ -176,6 +179,9 @@ func saveSrc() {
 	log.Println("saveSrc")
 	log.Println("---------------------")
 
+	database.Close()
+	database.Connect()
+
 	var query string
 	if pageSrc.bDesc {
 		query = "UPDATE src" + "\n" +
@@ -183,7 +189,7 @@ func saveSrc() {
 			"WHERE id = " + strconv.Itoa(pageSrc.mPosId[pageSrc.curPos])
 	} else if pageSrc.bName {
 		query = "UPDATE src" + "\n" +
-			"SET line = '" + strings.TrimSpace(pageSrc.descArea.GetText()) + "'\n" +
+			"SET line = '" + strings.TrimRight(pageSrc.descArea.GetText(), " ") + "'\n" +
 			"WHERE id = " + strconv.Itoa(pageSrc.mPosId[pageSrc.curPos])
 	}
 	log.Println(query)

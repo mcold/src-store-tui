@@ -22,7 +22,7 @@ func (database *databaseType) buildConnectionString() {
 }
 
 func (database *databaseType) Connect() error {
-	db, err := sql.Open("sqlite", os.Args[1]+".db")
+	db, err := sql.Open("sqlite", "DBs"+string(os.PathSeparator)+os.Args[1]+".db")
 	check(err)
 
 	if err != nil {
@@ -51,8 +51,6 @@ func delAbsParent() {
 	queryParent := `DELETE FROM obj
 					 WHERE id_parent not in (select id
 											   from obj)`
-
-	log.Println(queryParent)
 	_, err := database.Exec(queryParent)
 	check(err)
 
@@ -60,8 +58,6 @@ func delAbsParent() {
 			    WHERE id_prj is null
                    or id_prj not in (select id
                         				from prj)`
-
-	log.Println(queryObj)
 	_, err = database.Exec(queryObj)
 	check(err)
 
@@ -69,8 +65,6 @@ func delAbsParent() {
 			    WHERE id_file is null
                    or id_file not in (select id
                         				from obj)`
-
-	log.Println(querySrc)
 	_, err = database.Exec(querySrc)
 	check(err)
 }

@@ -5,7 +5,6 @@ import (
 	"github.com/atotto/clipboard"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
-	"log"
 	"strconv"
 )
 
@@ -85,33 +84,21 @@ func (pageExec *pageExecType) build() {
 }
 
 func saveExec() {
-	log.Println("-------------------------------")
-	log.Println("saveExec")
-	log.Println("---------------------")
 
 	query := "UPDATE obj" + "\n" +
 		"SET exec = '" + pageExec.execArea.GetText() + "'\n" +
 		", output = '" + pageExec.outArea.GetText() + "'\n" +
 		"WHERE id = " + strconv.Itoa(pageProTree.trPro.GetCurrentNode().GetReference().(int))
 
-	log.Println(query)
-
 	_, err := database.Exec(query)
 	check(err)
-
-	log.Println("-------------------------------")
-
 }
 
 func setExec() {
-	log.Println("-------------------------------")
-	log.Println("setSrcLine")
 	query := `select exec
 					, output
 				from obj` +
 		` where id = ` + strconv.Itoa(pageProTree.trPro.GetCurrentNode().GetReference().(int))
-
-	log.Println(query)
 
 	obj, err := database.Query(query)
 	check(err)
@@ -122,8 +109,6 @@ func setExec() {
 	pageExec.execArea.SetText(exec.String, true)
 	pageExec.outArea.SetText(output.String, true)
 	obj.Close()
-
-	log.Println("-------------------------------")
 }
 
 func (pageExec *pageExecType) show() {

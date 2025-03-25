@@ -41,9 +41,9 @@ func (application *applicationType) registerGlobalShortcuts() {
 			removeSrcDesc()
 			pageProTree.show()
 		case tcell.KeyF4:
-			pageProDesc.show()
-		case tcell.KeyF5:
 			pageSrc.show()
+		case tcell.KeyF5:
+			pageProDesc.show()
 		case tcell.KeyF6:
 			pageObjDesc.show()
 		case tcell.KeyF10:

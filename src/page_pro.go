@@ -118,6 +118,9 @@ func (pagePro *pageProType) build() {
 
 		if event.Key() == tcell.KeyCtrlQ {
 			if pagePro.descArea.GetDisabled() == true {
+				if pagePro.nameArea.GetDisabled() == false {
+					hideProName()
+				}
 				pagePro.flListPro.AddItem(pagePro.descArea, 0, 1, false)
 				pagePro.descArea.SetText(getProDesc(), true)
 				app.SetFocus(pagePro.descArea)
@@ -129,6 +132,9 @@ func (pagePro *pageProType) build() {
 		}
 		if event.Key() == tcell.KeyCtrlW {
 			if pagePro.nameArea.GetDisabled() == true {
+				if pagePro.descArea.GetDisabled() == false {
+					hideProDesc()
+				}
 				pagePro.nameArea.SetTitle("name")
 				pagePro.flListPro.AddItem(pagePro.nameArea, 0, 1, false)
 				itemName, _ := pagePro.lPro.GetItemText(pagePro.lPro.GetCurrentItem())
@@ -232,48 +238,29 @@ func reloadProTree() {
 }
 
 func saveProName() {
-	log.Println("-------------------------------")
-	log.Println("saveProName")
-	log.Println("---------------------")
 
 	query := "UPDATE prj" + "\n" +
 		"SET name = '" + strings.TrimSpace(pagePro.nameArea.GetText()) + "'\n" +
 		"WHERE id = " + strconv.Itoa(pagePro.mPosId[pagePro.lPro.GetCurrentItem()])
 
-	log.Println(query)
-
 	_, err := database.Exec(query)
 	check(err)
-
-	database.Close()
-	database.Connect()
-
-	log.Println("-------------------------------")
 }
 
 func saveProProDesc() {
-	log.Println("-------------------------------")
-	log.Println("saveProProDesc")
-	log.Println("---------------------")
 
 	query := "UPDATE prj" + "\n" +
 		"SET comment = '" + strings.TrimSpace(pagePro.descArea.GetText()) + "'\n" +
 		"WHERE id = " + strconv.Itoa(pagePro.mPosId[pagePro.lPro.GetCurrentItem()])
 
-	log.Println(query)
-
 	_, err := database.Exec(query)
 	check(err)
-
-	log.Println("-------------------------------")
 }
 
 func getProDesc() string {
 	query := `select comment
 				from prj` +
 		` where id = ` + strconv.Itoa(pagePro.mPosId[pagePro.lPro.GetCurrentItem()])
-
-	log.Println(query)
 
 	pro, err := database.Query(query)
 	check(err)
@@ -288,23 +275,14 @@ func getProDesc() string {
 }
 
 func saveProDescCtrl() {
-	log.Println("-------------------------------")
-	log.Println("saveProDescCtrl")
-	log.Println("---------------------")
 
 	var query string
 	query = "UPDATE prj" + "\n" +
 		"SET comment = '" + pagePro.descArea.GetText() + "'\n" +
 		"WHERE id = " + strconv.Itoa(pagePro.mPosId[pagePro.lPro.GetCurrentItem()])
-	log.Println(query)
 
 	_, err := database.Exec(query)
 	check(err)
-
-	database.Close()
-	database.Connect()
-
-	log.Println("-------------------------------")
 }
 
 func hideProDesc() {

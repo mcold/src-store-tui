@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
-	"log"
 	"strconv"
 )
 
@@ -41,20 +40,16 @@ func (pageObjDesc *pageObjDescType) build() {
 	pageObjDesc.Flex = tview.NewFlex().SetDirection(tview.FlexColumn).
 		AddItem(pageObjDesc.descArea, 0, 1, true)
 
-	pageObjDesc.Flex.SetTitle("F6/F5").
+	pageObjDesc.Flex.SetTitle("F4").
 		SetTitleAlign(tview.AlignLeft)
 
 	pageProTree.Pages.AddPage("proObjDesc", pageObjDesc.Flex, true, false)
 }
 
 func saveObjDesc() {
-	log.Println("saveObjDesc")
-
 	query := "UPDATE obj" + "\n" +
 		"SET comment = '" + pageObjDesc.descArea.GetText() + "'\n" +
 		"WHERE id = " + strconv.Itoa(pageProTree.trPro.GetCurrentNode().GetReference().(int))
-
-	log.Println(query)
 
 	_, err := database.Exec(query, "PRAGMA busy_timeout=30000;")
 	check(err)
@@ -68,8 +63,6 @@ func (pageObjDesc *pageObjDescType) show() {
 }
 
 func setObjDesc() {
-	log.Println("-------------------------------")
-	log.Println("setObjDesc")
 	query := `select comment
 				from obj` +
 		` where id = ` + strconv.Itoa(pageProTree.trPro.GetCurrentNode().GetReference().(int))
@@ -85,15 +78,12 @@ func setObjDesc() {
 	pageProTree.descArea.SetText(comment.String, true)
 	obj.Close()
 
-	if len(comment.String) > 0 {
-		pageProTree.descArea.SetText(comment.String, true)
+	if len(comment.String) == 0 {
+		pageProTree.flTree.RemoveItem(pageProTree.descArea)
+	} else {
 		if pageProTree.descArea.GetDisabled() == true {
 			pageProTree.descArea.SetDisabled(false)
 			pageProTree.flTree.AddItem(pageProTree.descArea, 0, 3, false)
 		}
-	} else {
-		pageProTree.flTree.RemoveItem(pageProTree.descArea)
 	}
-
-	log.Println("-------------------------------")
 }

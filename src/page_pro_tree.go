@@ -45,13 +45,11 @@ func (pageProTree *pageProTreeType) build() {
 
 	pageProTree.trPro.SetTopLevel(1)
 
-	pageProTree.trPro.SetTitle("F3/F4").
+	pageProTree.trPro.SetTitle("F3").
 		SetTitleAlign(tview.AlignLeft)
 
 	pageProTree.trPro.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		log.Println(event.Key())
 		if event.Key() == tcell.KeyDelete {
-			log.Println("DELETE")
 			delObj(pageProTree.trPro.GetCurrentNode().GetReference().(int))
 			pageProTree.rootPro.ClearChildren()
 			setTreePro(pagePro.lPro.GetCurrentItem())
@@ -121,32 +119,31 @@ func (pageProTree *pageProTreeType) build() {
 
 		if event.Key() == tcell.KeyCtrlQ {
 			if pageProTree.descArea.GetDisabled() == true {
+				if pageProTree.nameArea.GetDisabled() == false {
+					hideObjName()
+				}
 				pageProTree.descArea.SetTitle("comment")
-				pageProTree.flTree.AddItem(pageProTree.descArea, 0, 1, false)
+				pageProTree.flTree.AddItem(pageProTree.descArea, 0, 3, false)
 				pageProTree.descArea.SetText(getObjDesc(), true)
 				app.SetFocus(pageProTree.descArea)
 				pageProTree.descArea.SetDisabled(false)
 			} else {
-				saveObjDescCtrl()
-				pageProTree.descArea.SetDisabled(true)
-				pageProTree.flTree.RemoveItem(pageProTree.descArea)
-				app.SetFocus(pageProTree.flTree)
+				hideObjDesc()
 			}
 
 		}
 		if event.Key() == tcell.KeyCtrlW {
 			if pageProTree.nameArea.GetDisabled() == true {
+				if pageProTree.nameArea.GetDisabled() == true {
+					hideObjDesc()
+				}
 				pageProTree.nameArea.SetTitle("name")
 				pageProTree.flTree.AddItem(pageProTree.nameArea, 0, 1, false)
 				pageProTree.nameArea.SetText(pageProTree.trPro.GetCurrentNode().GetText()+" <mask>", true)
 				app.SetFocus(pageProTree.nameArea)
 				pageProTree.nameArea.SetDisabled(false)
 			} else {
-				saveObjNameCtrl()
-				pageProTree.trPro.GetCurrentNode().SetText(strings.TrimSpace(pageProTree.nameArea.GetText()))
-				pageProTree.nameArea.SetDisabled(true)
-				pageProTree.flTree.RemoveItem(pageProTree.nameArea)
-				app.SetFocus(pageProTree.flTree)
+				hideObjName()
 			}
 		}
 
@@ -158,8 +155,6 @@ func (pageProTree *pageProTreeType) build() {
 }
 
 func setTreePro(pos int) {
-	log.Println("-------------------------------")
-	log.Println("setTreePro")
 
 	queryObject := `select id
 						   , name
@@ -181,24 +176,13 @@ func setTreePro(pos int) {
 		err := objects.Scan(&id, &objName, &objType)
 		check(err)
 
-		log.Println(id)
-		log.Println(objName.String)
-		log.Println(objName.String)
-
 		objNode := tview.NewTreeNode(objName.String).
 			SetReference(int(id.Int64)).
 			SetSelectable(true).
 			SetColor(tcell.ColorGreen)
 
 		objNode.SetSelectedFunc(func() {
-			pageSrc.lSrc.Clear()
-			setObjDesc()
-			setFileSrc(int(id.Int64))
-			setObjExec(int(id.Int64))
-			removeSrcDesc()
-			showObjDesc()
-
-			pageProTree.Pages.SwitchToPage("src")
+			objNodeSelectAction(int(id.Int64))
 		})
 
 		switch int(objType.Int16) {
@@ -220,15 +204,9 @@ func setTreePro(pos int) {
 	if pageSrc.lSrc.GetItemCount() > 0 {
 		pageSrc.lSrc.SetCurrentItem(0)
 	}
-
-	log.Println("-------------------------------")
 }
 
-// cycle fulfill project tree
 func setTreeFolderPro(node *tview.TreeNode) {
-	log.Println("-------------------------------")
-	log.Println("setTreeFolderPro")
-	log.Println("--------------------")
 
 	queryObj := `select id
 					   , name
@@ -236,8 +214,6 @@ func setTreeFolderPro(node *tview.TreeNode) {
 					from obj
 				   where id_parent = ` + strconv.Itoa(pageProTree.curFolderID) +
 		` order by object_type asc`
-
-	log.Println(queryObj)
 
 	objects, err := database.Query(queryObj)
 	check(err)
@@ -261,10 +237,7 @@ func setTreeFolderPro(node *tview.TreeNode) {
 			setTreeFolderPro(objNode)
 		case 1: // file
 			objNode.SetColor(tcell.ColorGrey)
-			objNode.SetSelectedFunc(func() {
-				pageSrc.lSrc.Clear()
-				setFileSrc(int(id.Int64))
-			})
+			objNode.SetSelectedFunc(func() { objNodeSelectAction(int(id.Int64)) })
 		default:
 			objNode.SetColor(tcell.ColorRed)
 		}
@@ -273,26 +246,18 @@ func setTreeFolderPro(node *tview.TreeNode) {
 	}
 
 	objects.Close()
-
-	log.Println("-------------------------------")
 }
 
 func setObjExec(id int) {
-	log.Println("-------------------------------")
-	log.Println("setObjExec")
-	log.Println("--------------------")
 	query := `select exec
 				   , output
 				from obj
 			   where id = ` + strconv.Itoa(id)
 
-	log.Println(query)
-
 	obj := database.QueryRow(query)
 	check(obj.Err())
 
 	var exec, output sql.NullString
-	log.Println(output)
 	err := obj.Scan(&exec, &output)
 	check(err)
 
@@ -302,21 +267,16 @@ func setObjExec(id int) {
 }
 
 func delObj(idObj int) {
-	log.Println("-------------------------------")
-	log.Println("delObj")
-	log.Println("--------------------")
 
 	queryObj := `DELETE FROM obj
 			    WHERE id = ` + strconv.Itoa(idObj)
 
-	log.Println(queryObj)
 	_, err := database.Exec(queryObj)
 	check(err)
 
 	querySrc := `DELETE FROM src
 			    WHERE id_file = ` + strconv.Itoa(idObj)
 
-	log.Println(querySrc)
 	_, err = database.Exec(querySrc)
 	check(err)
 
@@ -335,54 +295,30 @@ func (pageProTree *pageProTreeType) show() {
 }
 
 func saveObjDescCtrl() {
-	log.Println("-------------------------------")
-	log.Println("saveObjDescCtrl")
-	log.Println("---------------------")
-
-	database.Close()
-	database.Connect()
 
 	var query string
 	query = "UPDATE obj" + "\n" +
 		"SET comment = '" + pageProTree.descArea.GetText() + "'\n" +
 		"WHERE id = " + strconv.Itoa(pageProTree.trPro.GetCurrentNode().GetReference().(int))
-	log.Println(query)
 
 	_, err := database.Exec(query)
 	check(err)
-
-	database.Close()
-	database.Connect()
-
-	log.Println("-------------------------------")
 }
 
 func saveObjNameCtrl() {
-	log.Println("-------------------------------")
-	log.Println("saveObjNameCtrl")
-	log.Println("---------------------")
-
 	var query string
 	query = "UPDATE obj" + "\n" +
 		"SET name = '" + pageProTree.nameArea.GetText() + "'\n" +
 		"WHERE id = " + strconv.Itoa(pageProTree.trPro.GetCurrentNode().GetReference().(int))
-	log.Println(query)
 
 	_, err := database.Exec(query)
 	check(err)
-
-	database.Close()
-	database.Connect()
-
-	log.Println("-------------------------------")
 }
 
 func getObjDesc() string {
 	query := `select comment
 				from obj` +
 		` where id = ` + strconv.Itoa(pageProTree.trPro.GetCurrentNode().GetReference().(int))
-
-	log.Println(query)
 
 	obj, err := database.Query(query)
 	check(err)
@@ -397,13 +333,10 @@ func getObjDesc() string {
 }
 
 func showObjDesc() {
-	log.Println("-------------------------------")
-	log.Println("showObjDesc")
+
 	query := `select comment
 				from obj` +
 		` where id = ` + strconv.Itoa(pageProTree.trPro.GetCurrentNode().GetReference().(int))
-
-	log.Println(query)
 
 	obj, err := database.Query(query)
 	check(err)
@@ -411,20 +344,35 @@ func showObjDesc() {
 	obj.Next()
 	var comment sql.NullString
 	err = obj.Scan(&comment)
-	log.Println("comment: ")
-	log.Println(comment.String)
-	//if len(comment.String) > 0 {
-	//	pageProTree.descArea.SetText(comment.String, true)
-	//	if pageProTree.descArea.GetDisabled() == true {
-	//		pageProTree.descArea.SetDisabled(false)
-	//		pageProTree.flTree.AddItem(pageProTree.descArea, 0, 3, false)
-	//	}
-	//} else {
-	//	pageProTree.flTree.RemoveItem(pageProTree.descArea)
-	//}
 
 	obj.Close()
+}
 
-	log.Println("-------------------------------")
+func hideObjDesc() {
+	saveObjDescCtrl()
+	pageProTree.descArea.SetDisabled(true)
+	pageProTree.flTree.RemoveItem(pageProTree.descArea)
+	app.SetFocus(pageProTree.flTree)
+}
 
+func hideObjName() {
+	saveObjNameCtrl()
+	pageProTree.trPro.GetCurrentNode().SetText(strings.TrimSpace(pageProTree.nameArea.GetText()))
+	pageProTree.nameArea.SetDisabled(true)
+	pageProTree.flTree.RemoveItem(pageProTree.nameArea)
+	app.SetFocus(pageProTree.flTree)
+}
+
+func objNodeSelectAction(id int) {
+	if pageProTree.descArea.GetDisabled() == false {
+		pageProTree.descArea.SetDisabled(true)
+		pageProTree.flTree.RemoveItem(pageProTree.descArea)
+	}
+	pageSrc.lSrc.Clear()
+	setObjDesc()
+	setFileSrc(id)
+	setObjExec(id)
+	removeSrcDesc()
+	showObjDesc()
+	pageProTree.Pages.SwitchToPage("src")
 }

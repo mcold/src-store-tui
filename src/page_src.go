@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
-	"log"
 	"strconv"
 	"strings"
 )
@@ -36,7 +35,7 @@ func (pageSrc *pageSrcType) build() {
 
 	pageSrc.lSrc.SetSelectedBackgroundColor(tcell.ColorOrange)
 
-	pageSrc.lSrc.SetTitle("F5/F6").
+	pageSrc.lSrc.SetTitle("F4").
 		SetTitleAlign(tview.AlignLeft)
 
 	pageSrc.descArea = tview.NewTextArea()
@@ -57,8 +56,6 @@ func (pageSrc *pageSrcType) build() {
 	})
 
 	pageSrc.lSrc.SetSelectedFunc(func(i int, s string, s2 string, r rune) {
-		log.Println("test output:\n")
-		log.Println(s)
 
 		pageSrc.descArea.SetText(s2, true)
 		pageSrc.curPos = pageSrc.lSrc.GetCurrentItem()
@@ -120,9 +117,6 @@ func (pageSrc *pageSrcType) build() {
 }
 
 func setFileSrc(idFile int) {
-	log.Println("-------------------------------")
-	log.Println("setFileSrc")
-	log.Println("--------------------")
 
 	query := `select id
 				   , line
@@ -130,8 +124,6 @@ func setFileSrc(idFile int) {
 				from src
 			   where id_file = ` + strconv.Itoa(idFile) +
 		` order by num asc`
-
-	log.Println(query)
 
 	lines, err := database.Query(query)
 	check(err)
@@ -151,16 +143,12 @@ func setFileSrc(idFile int) {
 	}
 
 	lines.Close()
-
-	log.Println("-------------------------------")
 }
 
 func delSrc() {
-	log.Println("delSrc")
 	query := `DELETE FROM src
 			  WHERE id = ` + strconv.Itoa(pageSrc.mPosId[pageSrc.curPos])
 
-	log.Println(query)
 	_, err := database.Exec(query)
 	check(err)
 }
@@ -175,13 +163,6 @@ func (pageSrc *pageSrcType) show() {
 }
 
 func saveSrc() {
-	log.Println("-------------------------------")
-	log.Println("saveSrc")
-	log.Println("---------------------")
-
-	database.Close()
-	database.Connect()
-
 	var query string
 	if pageSrc.bDesc {
 		query = "UPDATE src" + "\n" +
@@ -192,23 +173,15 @@ func saveSrc() {
 			"SET line = '" + strings.TrimRight(pageSrc.descArea.GetText(), " ") + "'\n" +
 			"WHERE id = " + strconv.Itoa(pageSrc.mPosId[pageSrc.curPos])
 	}
-	log.Println(query)
 
 	_, err := database.Exec(query)
 	check(err)
-
-	log.Println("-------------------------------")
-
 }
 
 func setSrcLine() {
-	log.Println("-------------------------------")
-	log.Println("setSrcLine")
 	query := `select line
 				from src` +
 		` where id = ` + strconv.Itoa(pageSrc.mPosId[pageSrc.curPos])
-
-	log.Println(query)
 
 	src, err := database.Query(query)
 	check(err)
@@ -219,8 +192,6 @@ func setSrcLine() {
 	// TODO: added mask - cause trim last token - I don't know why
 	pageSrc.descArea.SetText(line.String+" <mask>\n", true)
 	src.Close()
-
-	log.Println("-------------------------------")
 }
 
 func saveSrcDescCtrl() {

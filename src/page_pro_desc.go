@@ -3,7 +3,6 @@ package main
 import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
-	"log"
 	"strconv"
 )
 
@@ -51,8 +50,6 @@ func saveProDesc() {
 	query := "UPDATE prj" + "\n" +
 		"SET comment = '" + pageProDesc.descArea.GetText() + "'\n" +
 		"WHERE id = " + strconv.Itoa(pagePro.mPosId[pagePro.lPro.GetCurrentItem()])
-
-	log.Println(query)
 
 	_, err := database.Exec(query, "PRAGMA busy_timeout=30000;")
 

@@ -23,6 +23,8 @@ func (application *applicationType) init() {
 	application.pages = tview.NewPages()
 	pageMain.build()
 
+	application.pages.SetBackgroundColor(tcell.ColorDarkSlateGrey)
+	
 	application.registerGlobalShortcuts()
 
 	if err := app.SetRoot(application.pages, true).EnableMouse(true).EnablePaste(true).Run(); err != nil {
@@ -38,7 +40,6 @@ func (application *applicationType) registerGlobalShortcuts() {
 		case tcell.KeyF2:
 			app.SetFocus(pagePro.lPro)
 		case tcell.KeyF3:
-			removeSrcDesc()
 			pageProTree.show()
 		case tcell.KeyF4:
 			pageSrc.show()

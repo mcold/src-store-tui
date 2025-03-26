@@ -66,7 +66,7 @@ func (pageSrc *pageSrcType) build() {
 	pageSrc.Flex = tview.NewFlex().SetDirection(tview.FlexRow).
 		AddItem(pageSrc.lSrc, 0, 10, true)
 
-	pageSrc.Flex.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+	pageSrc.lSrc.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 
 		if event.Key() == tcell.KeyDelete {
 			delSrc()
@@ -189,8 +189,7 @@ func setSrcLine() {
 	src.Next()
 	var line sql.NullString
 	err = src.Scan(&line)
-	// TODO: added mask - cause trim last token - I don't know why
-	pageSrc.descArea.SetText(line.String+" <mask>\n", true)
+	pageSrc.descArea.SetText(line.String, true)
 	src.Close()
 }
 

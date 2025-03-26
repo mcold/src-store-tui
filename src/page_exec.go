@@ -10,7 +10,6 @@ import (
 
 type pageExecType struct {
 	execArea *tview.TextArea
-	outArea  *tview.TextArea
 	*tview.Flex
 }
 
@@ -31,7 +30,6 @@ func (pageExec *pageExecType) build() {
 		if event.Rune() == 's' && event.Modifiers() == tcell.ModAlt {
 			saveExec()
 			pageExec.execArea.SetText("", true)
-			pageExec.outArea.SetText("", true)
 			return nil
 		}
 		if event.Rune() == 'c' && event.Modifiers() == tcell.ModAlt {
@@ -47,38 +45,8 @@ func (pageExec *pageExecType) build() {
 		return event
 	})
 
-	pageExec.outArea = tview.NewTextArea()
-
-	pageExec.outArea.
-		SetBorderPadding(2, 2, 2, 2).
-		SetBackgroundColor(tcell.ColorBlue)
-
-	pageExec.outArea.SetBorderColor(tcell.ColorBlue)
-
-	pageExec.outArea.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-
-		if event.Rune() == 's' && event.Modifiers() == tcell.ModAlt {
-			saveExec()
-			pageExec.execArea.SetText("", true)
-			pageExec.outArea.SetText("", true)
-			return nil
-		}
-		if event.Rune() == 'c' && event.Modifiers() == tcell.ModAlt {
-			err := clipboard.WriteAll(pageExec.outArea.GetText())
-			check(err)
-		}
-		if event.Rune() == 'v' && event.Modifiers() == tcell.ModAlt {
-			clipBoardContent, err := clipboard.ReadAll()
-			check(err)
-
-			pageExec.outArea.SetText(pageExec.outArea.GetText()+clipBoardContent, true)
-		}
-		return event
-	})
-
 	pageExec.Flex = tview.NewFlex().SetDirection(tview.FlexRow).
-		AddItem(pageExec.execArea, 0, 1, true).
-		AddItem(pageExec.outArea, 0, 1, true)
+		AddItem(pageExec.execArea, 0, 1, true)
 
 	pageProTree.Pages.AddPage("exec", pageExec.Flex, true, false)
 }
@@ -87,7 +55,6 @@ func saveExec() {
 
 	query := "UPDATE obj" + "\n" +
 		"SET exec = '" + pageExec.execArea.GetText() + "'\n" +
-		", output = '" + pageExec.outArea.GetText() + "'\n" +
 		"WHERE id = " + strconv.Itoa(pageProTree.trPro.GetCurrentNode().GetReference().(int))
 
 	_, err := database.Exec(query)
@@ -96,7 +63,6 @@ func saveExec() {
 
 func setExec() {
 	query := `select exec
-					, output
 				from obj` +
 		` where id = ` + strconv.Itoa(pageProTree.trPro.GetCurrentNode().GetReference().(int))
 
@@ -104,10 +70,9 @@ func setExec() {
 	check(err)
 
 	obj.Next()
-	var exec, output sql.NullString
-	err = obj.Scan(&exec, &output)
+	var exec sql.NullString
+	err = obj.Scan(&exec)
 	pageExec.execArea.SetText(exec.String, true)
-	pageExec.outArea.SetText(output.String, true)
 	obj.Close()
 }
 

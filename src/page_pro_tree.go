@@ -250,19 +250,17 @@ func setTreeFolderPro(node *tview.TreeNode) {
 
 func setObjExec(id int) {
 	query := `select exec
-				   , output
 				from obj
 			   where id = ` + strconv.Itoa(id)
 
 	obj := database.QueryRow(query)
 	check(obj.Err())
 
-	var exec, output sql.NullString
-	err := obj.Scan(&exec, &output)
+	var exec sql.NullString
+	err := obj.Scan(&exec)
 	check(err)
 
 	pageExec.execArea.SetText(exec.String, true)
-	pageExec.outArea.SetText(output.String, true)
 
 }
 

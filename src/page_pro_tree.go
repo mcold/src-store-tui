@@ -76,7 +76,6 @@ func (pageProTree *pageProTreeType) build() {
 	pageProTree.descArea.SetBorderColor(tcell.ColorBlue)
 	pageProTree.descArea.SetBorderPadding(1, 1, 1, 1)
 	pageProTree.descArea.SetDisabled(true)
-	pageProTree.descArea.SetBackgroundColor(tcell.ColorDarkSlateGrey)
 
 	pageProTree.descArea.SetBorder(true).
 		SetBorderPadding(1, 1, 1, 1).
@@ -98,7 +97,6 @@ func (pageProTree *pageProTreeType) build() {
 	pageProTree.nameArea.SetBorderColor(tcell.ColorBlue)
 	pageProTree.nameArea.SetBorderPadding(1, 1, 1, 1)
 	pageProTree.nameArea.SetDisabled(true)
-	pageProTree.nameArea.SetBackgroundColor(tcell.ColorDarkSlateGrey)
 
 	pageProTree.nameArea.SetBorder(true).
 		SetBorderPadding(1, 1, 1, 1).
@@ -150,11 +148,6 @@ func (pageProTree *pageProTreeType) build() {
 
 		return event
 	})
-
-	pageProTree.Pages.SetBackgroundColor(tcell.ColorDarkSlateGrey)
-
-	pageProTree.flTree.SetBackgroundColor(tcell.ColorDarkSlateGrey)
-	pageProTree.trPro.SetBackgroundColor(tcell.ColorDarkSlateGrey)
 
 	pagePro.Pages.AddPage("proTree", pageProTree.Flex, true, true)
 

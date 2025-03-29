@@ -43,7 +43,6 @@ func (pageSrc *pageSrcType) build() {
 		SetBorderColor(tcell.ColorBlue).
 		SetTitle("comment").
 		SetTitleAlign(tview.AlignLeft)
-	pageSrc.descArea.SetBackgroundColor(tcell.ColorDarkSlateGrey)
 
 	pageSrc.descArea.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyEsc {
@@ -62,8 +61,6 @@ func (pageSrc *pageSrcType) build() {
 		SetTitle("name").
 		SetTitleAlign(tview.AlignLeft)
 
-	pageSrc.nameArea.SetBackgroundColor(tcell.ColorDarkSlateGrey)
-
 	pageSrc.nameArea.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyEsc {
 			hideSrcName()
@@ -78,13 +75,8 @@ func (pageSrc *pageSrcType) build() {
 		pageSrc.curPos = pageSrc.lSrc.GetCurrentItem()
 	})
 
-	pageSrc.lSrc.SetBackgroundColor(tcell.ColorDarkSlateGrey)
-
 	pageSrc.Flex = tview.NewFlex().SetDirection(tview.FlexRow).
 		AddItem(pageSrc.lSrc, 0, 10, true)
-
-	pageSrc.Flex.SetBackgroundColor(tcell.ColorDarkSlateGrey)
-	pageSrc.SetBackgroundColor(tcell.ColorDarkSlateGrey)
 
 	pageSrc.Flex.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 
@@ -156,7 +148,12 @@ func setFileSrc(idFile int) {
 
 		pageSrc.mPosId[posNum-1] = int(id.Int64)
 
-		pageSrc.lSrc.AddItem(strings.ReplaceAll(line.String, "\t", "    "), comment.String, rune(0), func() {})
+		lineName := strings.ReplaceAll(line.String, "\t", "    ")
+		n := len(lineName) - len(strings.TrimSpace(line.String)) - 1
+		if n < 0 {
+			n = 0
+		}
+		pageSrc.lSrc.AddItem(lineName, strings.Repeat(" ", n)+strings.TrimSpace(comment.String), rune(0), func() {})
 	}
 
 	lines.Close()
@@ -175,21 +172,6 @@ func (pageSrc *pageSrcType) show() {
 	pageSrc.lSrc.Clear()
 	setFileSrc(pageProTree.trPro.GetCurrentNode().GetReference().(int))
 	app.SetFocus(pageSrc.Flex)
-}
-
-func setSrcLine() {
-	query := `select line
-				from src` +
-		` where id = ` + strconv.Itoa(pageSrc.mPosId[pageSrc.curPos])
-
-	src, err := database.Query(query)
-	check(err)
-
-	src.Next()
-	var line sql.NullString
-	err = src.Scan(&line)
-	pageSrc.descArea.SetText(line.String, true)
-	src.Close()
 }
 
 func saveSrcDesc() {

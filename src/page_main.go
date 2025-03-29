@@ -1,7 +1,6 @@
 package main
 
 import (
-	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
 
@@ -21,7 +20,6 @@ func (pageMain *pageMainType) build() {
 
 	pageMain.pages = tview.NewPages()
 
-	pageMain.pages.SetBackgroundColor(tcell.ColorDarkSlateGrey)
 	pagePro.build()
 
 	pageMain.Flex = tview.NewFlex().SetDirection(tview.FlexColumn).

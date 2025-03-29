@@ -23,8 +23,6 @@ func (application *applicationType) init() {
 	application.pages = tview.NewPages()
 	pageMain.build()
 
-	application.pages.SetBackgroundColor(tcell.ColorDarkSlateGrey)
-	
 	application.registerGlobalShortcuts()
 
 	if err := app.SetRoot(application.pages, true).EnableMouse(true).EnablePaste(true).Run(); err != nil {

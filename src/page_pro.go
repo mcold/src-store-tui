@@ -14,6 +14,7 @@ type pageProType struct {
 	descArea  *tview.TextArea
 	nameArea  *tview.TextArea
 	mPosId    map[int]int
+	flexPro   *tview.Flex
 	flListPro *tview.Flex
 	*tview.Pages
 }
@@ -110,7 +111,7 @@ func (pagePro *pageProType) build() {
 		return event
 	})
 
-	flexPro := tview.NewFlex().SetDirection(tview.FlexColumn).
+	pagePro.flexPro = tview.NewFlex().SetDirection(tview.FlexColumn).
 		AddItem(pagePro.flListPro, 0, 1, true).
 		AddItem(pagePro.Pages, 0, 4, true)
 
@@ -150,7 +151,7 @@ func (pagePro *pageProType) build() {
 		return event
 	})
 
-	pageMain.pages.AddPage("pro", flexPro, true, true)
+	pageMain.pages.AddPage("pro", pagePro.flexPro, true, true)
 
 }
 

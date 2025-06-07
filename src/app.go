@@ -47,6 +47,15 @@ func (application *applicationType) registerGlobalShortcuts() {
 			pageObjDesc.show()
 		case tcell.KeyF10:
 			pageExec.show()
+		case tcell.KeyF11:
+			pagePro.flexPro.RemoveItem(pagePro.flListPro)
+		case tcell.KeyF12:
+			if pagePro.flexPro.GetItemCount() < 2 {
+				pagePro.flexPro.RemoveItem(pagePro.Pages)
+				pagePro.flexPro.AddItem(pagePro.flListPro, 0, 1, true)
+				pagePro.flexPro.AddItem(pagePro.Pages, 0, 4, true)
+			}
+
 		default:
 			return event
 		}

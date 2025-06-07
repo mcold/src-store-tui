@@ -109,7 +109,6 @@ func (pageSrc *pageSrcType) build() {
 				}
 				pageSrc.Flex.AddItem(pageSrc.nameArea, 0, 1, false)
 				srcName, _ := pageSrc.lSrc.GetItemText(pageSrc.lSrc.GetCurrentItem())
-				//log.Println(srcName)
 				srcName = srcName + "<mask>" + "\n"
 				pageSrc.nameArea.SetText(srcName+" ", true)
 				app.SetFocus(pageSrc.nameArea)

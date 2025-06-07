@@ -159,7 +159,7 @@ func setTreePro(pos int) {
 						   , name
 						   , object_type
 						from obj
-					   where id_parent is null
+					   where (id_parent is null or id_parent = 0)
 						 and id_prj = ` + strconv.Itoa(pagePro.mPosId[pos]) +
 		` order by object_type asc`
 

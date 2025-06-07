@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
+	"log"
 	"strconv"
 	"strings"
 )
@@ -109,8 +110,7 @@ func (pageSrc *pageSrcType) build() {
 				}
 				pageSrc.Flex.AddItem(pageSrc.nameArea, 0, 1, false)
 				srcName, _ := pageSrc.lSrc.GetItemText(pageSrc.lSrc.GetCurrentItem())
-				srcName = srcName + "<mask>" + "\n"
-				pageSrc.nameArea.SetText(srcName+" ", true)
+				pageSrc.nameArea.SetText(srcName+" ", false)
 				app.SetFocus(pageSrc.nameArea)
 				pageSrc.nameArea.SetDisabled(false)
 			} else {

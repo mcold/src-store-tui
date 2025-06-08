@@ -2,20 +2,24 @@ package main
 
 import (
 	"database/sql"
+	"github.com/atotto/clipboard"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"log"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
 
 type pageProType struct {
-	lPro      *tview.List
-	descArea  *tview.TextArea
-	nameArea  *tview.TextArea
-	mPosId    map[int]int
-	flexPro   *tview.Flex
-	flListPro *tview.Flex
+	lPro       *tview.List
+	descArea   *tview.TextArea
+	nameArea   *tview.TextArea
+	exportArea *tview.TextArea
+	mPosId     map[int]int
+	flexPro    *tview.Flex
+	flListPro  *tview.Flex
 	*tview.Pages
 }
 
@@ -111,6 +115,31 @@ func (pagePro *pageProType) build() {
 		return event
 	})
 
+	pagePro.exportArea = tview.NewTextArea()
+	pagePro.exportArea.SetBorderColor(tcell.ColorBlue)
+	pagePro.exportArea.SetBorderPadding(1, 1, 1, 1)
+	pagePro.exportArea.SetDisabled(true)
+
+	pagePro.exportArea.SetBorder(true).
+		SetBorderPadding(1, 1, 1, 1).
+		SetBorderColor(tcell.ColorBlue).
+		SetTitle("name").
+		SetTitleAlign(tview.AlignLeft)
+
+	pagePro.exportArea.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyEsc {
+			hideProSave()
+			return nil
+		}
+		if event.Rune() == 'v' && event.Modifiers() == tcell.ModAlt {
+			clipBoardContent, err := clipboard.ReadAll()
+			check(err)
+
+			pagePro.exportArea.SetText(pagePro.exportArea.GetText()+clipBoardContent, true)
+		}
+		return event
+	})
+
 	pagePro.flexPro = tview.NewFlex().SetDirection(tview.FlexColumn).
 		AddItem(pagePro.flListPro, 0, 1, true).
 		AddItem(pagePro.Pages, 0, 4, true)
@@ -121,6 +150,9 @@ func (pagePro *pageProType) build() {
 			if pagePro.descArea.GetDisabled() == true {
 				if pagePro.nameArea.GetDisabled() == false {
 					hideProName()
+				}
+				if pagePro.exportArea.GetDisabled() == false {
+					hideProSave()
 				}
 				pagePro.flListPro.AddItem(pagePro.descArea, 0, 1, false)
 				pagePro.descArea.SetText(getProDesc(), true)
@@ -136,6 +168,9 @@ func (pagePro *pageProType) build() {
 				if pagePro.descArea.GetDisabled() == false {
 					hideProDesc()
 				}
+				if pagePro.exportArea.GetDisabled() == false {
+					hideProSave()
+				}
 				pagePro.nameArea.SetTitle("name")
 				pagePro.flListPro.AddItem(pagePro.nameArea, 0, 1, false)
 				itemName, _ := pagePro.lPro.GetItemText(pagePro.lPro.GetCurrentItem())
@@ -144,6 +179,24 @@ func (pagePro *pageProType) build() {
 				pagePro.nameArea.SetDisabled(false)
 			} else {
 				hideProName()
+			}
+
+		}
+
+		if event.Key() == tcell.KeyCtrlS {
+			if pagePro.exportArea.GetDisabled() == true {
+				if pagePro.descArea.GetDisabled() == false {
+					hideProDesc()
+				}
+				if pagePro.nameArea.GetDisabled() == false {
+					hideProName()
+				}
+				pagePro.exportArea.SetTitle("save")
+				pagePro.flListPro.AddItem(pagePro.exportArea, 0, 1, false)
+				app.SetFocus(pagePro.exportArea)
+				pagePro.exportArea.SetDisabled(false)
+			} else {
+				hideProSave()
 			}
 
 		}
@@ -216,13 +269,11 @@ func delPro(idPro int) {
 	queryObj := `DELETE FROM obj
 			    WHERE id_prj = ` + strconv.Itoa(idPro)
 
-	log.Println("delPro", queryObj)
 	_, err = database.Exec(queryObj)
 
 	queryPro := `DELETE FROM prj
 			    WHERE id = ` + strconv.Itoa(idPro)
 
-	log.Println("delPro", queryPro)
 	_, err = database.Exec(queryPro)
 
 	check(err)
@@ -306,4 +357,166 @@ func hideProName() {
 	setListPro()
 	pagePro.lPro.SetCurrentItem(curPos)
 	app.SetFocus(pagePro.lPro)
+}
+
+func hideProSave() {
+	pagePro.exportArea.SetDisabled(true)
+	curPos := pagePro.lPro.GetCurrentItem()
+
+	path := pagePro.exportArea.GetText()
+	if len(strings.TrimSpace(path)) > 0 {
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			err := os.Mkdir(path, 0777)
+			check(err)
+		}
+		downloadPrj(pagePro.lPro.GetCurrentItem(), path)
+	}
+
+	pagePro.flListPro.RemoveItem(pagePro.exportArea)
+	pagePro.lPro.Clear()
+	setListPro()
+	pagePro.lPro.SetCurrentItem(curPos)
+	app.SetFocus(pagePro.lPro)
+}
+
+func downloadPrj(pos int, path string) {
+
+	query := `select name
+				from prj
+			  where id = ` + strconv.Itoa(pagePro.mPosId[pagePro.lPro.GetCurrentItem()])
+
+	pros, err := database.Query(query)
+	check(err)
+
+	pros.Next()
+	var prjName sql.NullString
+	err = pros.Scan(&prjName)
+
+	objRootPathfile := filepath.Join(path, prjName.String)
+	if _, err := os.Stat(objRootPathfile); os.IsNotExist(err) {
+		err := os.Mkdir(objRootPathfile, 0777)
+		check(err)
+	}
+	check(err)
+
+	pros.Close()
+
+	queryObject := `select id
+						   , name
+						   , object_type
+						from obj
+					   where (id_parent is null or id_parent = 0)
+						 and id_prj = ` + strconv.Itoa(pagePro.mPosId[pos]) +
+		` order by object_type asc`
+
+	objects, err := database.Query(queryObject)
+	check(err)
+
+	for objects.Next() {
+		var objID sql.NullInt64
+		var objName sql.NullString
+		var objType sql.NullInt16
+		err := objects.Scan(&objID, &objName, &objType)
+		check(err)
+
+		switch int(objType.Int16) {
+		case 0:
+
+			folderPath := filepath.Join(objRootPathfile, objName.String)
+			if _, err := os.Stat(folderPath); os.IsNotExist(err) {
+				err := os.Mkdir(folderPath, 0777)
+				check(err)
+			}
+			check(err)
+
+			downloadFolderPro(int(objID.Int64), folderPath)
+		case 1:
+
+			file, err := os.Create(filepath.Join(objRootPathfile, objName.String))
+			if err != nil {
+				panic(err)
+			}
+			downloadFilePro(int(objID.Int64), filepath.Join(objRootPathfile, objName.String))
+			defer file.Close()
+		}
+	}
+
+	objects.Close()
+}
+
+func downloadFolderPro(objID int, path string) {
+
+	queryObj := `select id
+					   , name
+					   , object_type
+					from obj
+				   where id_parent = ` + strconv.Itoa(objID) +
+		` order by object_type asc`
+
+	objects, err := database.Query(queryObj)
+	check(err)
+
+	objPath := path
+
+	if _, err := os.Stat(objPath); os.IsNotExist(err) {
+		err := os.Mkdir(objPath, 0777)
+		check(err)
+	}
+	check(err)
+
+	for objects.Next() {
+		var objID sql.NullInt64
+		var objName sql.NullString
+		var objType sql.NullInt16
+		err := objects.Scan(&objID, &objName, &objType)
+		check(err)
+
+		switch int(objType.Int16) {
+		case 0:
+			if _, err := os.Stat(objPath); os.IsNotExist(err) {
+				err := os.Mkdir(objPath, 0777)
+				check(err)
+			}
+			check(err)
+
+			downloadFolderPro(int(objID.Int64), filepath.Join(objPath, objName.String))
+		case 1:
+			filePath := filepath.Join(objPath, objName.String)
+
+			file, err := os.Create(filePath)
+			if err != nil {
+				panic(err)
+			}
+			downloadFilePro(int(objID.Int64), filePath)
+			defer file.Close()
+		}
+	}
+
+	objects.Close()
+
+}
+
+func downloadFilePro(objID int, path string) {
+
+	query := `select line
+				from src
+			   where id_file = ` + strconv.Itoa(objID) +
+		` order by num asc`
+
+	lines, err := database.Query(query)
+	check(err)
+
+	file, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0777)
+	check(err)
+
+	for lines.Next() {
+		var line sql.NullString
+		err := lines.Scan(&line)
+		check(err)
+
+		_, err = file.WriteString(line.String + "\n")
+	}
+	lines.Close()
+
+	defer file.Close()
 }

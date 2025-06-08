@@ -2,7 +2,10 @@ package main
 
 import (
 	"database/sql"
+	"github.com/atotto/clipboard"
 	"log"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -15,6 +18,7 @@ type pageProTreeType struct {
 	rootPro     *tview.TreeNode
 	descArea    *tview.TextArea
 	nameArea    *tview.TextArea
+	saveArea    *tview.TextArea
 	curFolderID int
 	flTree      *tview.Flex
 	*tview.Flex
@@ -56,6 +60,11 @@ func (pageProTree *pageProTreeType) build() {
 			setProComment()
 			pageObjDesc.descArea.SetText("", true)
 		}
+
+		// TODO: make areaView for path
+		//if event.Rune() == 's' && event.Modifiers() == tcell.ModAlt {
+		//	downloadObj(pageProTree.trPro.GetCurrentNode().GetReference().(int), "C:\\Users\\astonuser\\WD\\Go\\pro\\src-tui\\test")
+		//}
 
 		return event
 	})
@@ -115,12 +124,40 @@ func (pageProTree *pageProTreeType) build() {
 		return event
 	})
 
+	pageProTree.saveArea = tview.NewTextArea()
+	pageProTree.saveArea.SetBorderColor(tcell.ColorBlue)
+	pageProTree.saveArea.SetBorderPadding(1, 1, 1, 1)
+	pageProTree.saveArea.SetDisabled(true)
+
+	pageProTree.saveArea.SetBorder(true).
+		SetBorderPadding(1, 1, 1, 1).
+		SetBorderColor(tcell.ColorBlue).
+		SetTitle("name").
+		SetTitleAlign(tview.AlignLeft)
+
+	pageProTree.saveArea.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyEsc {
+			hideProSave()
+			return nil
+		}
+		if event.Rune() == 'v' && event.Modifiers() == tcell.ModAlt {
+			clipBoardContent, err := clipboard.ReadAll()
+			check(err)
+
+			pageProTree.saveArea.SetText(pageProTree.saveArea.GetText()+clipBoardContent, true)
+		}
+		return event
+	})
+
 	pageProTree.flTree.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 
 		if event.Key() == tcell.KeyCtrlQ {
 			if pageProTree.descArea.GetDisabled() == true {
 				if pageProTree.nameArea.GetDisabled() == false {
 					hideObjName()
+				}
+				if pageProTree.saveArea.GetDisabled() == false {
+					hideObjSave()
 				}
 				pageProTree.flTree.AddItem(pageProTree.descArea, 0, 3, false)
 				pageProTree.descArea.SetText(getObjDesc(), true)
@@ -136,6 +173,9 @@ func (pageProTree *pageProTreeType) build() {
 				if pageProTree.nameArea.GetDisabled() == true {
 					hideObjDesc()
 				}
+				if pageProTree.saveArea.GetDisabled() == false {
+					hideObjSave()
+				}
 				pageProTree.nameArea.SetTitle("name")
 				pageProTree.flTree.AddItem(pageProTree.nameArea, 0, 1, false)
 				pageProTree.nameArea.SetText(pageProTree.trPro.GetCurrentNode().GetText()+" <mask>", true)
@@ -144,6 +184,24 @@ func (pageProTree *pageProTreeType) build() {
 			} else {
 				hideObjName()
 			}
+		}
+
+		if event.Key() == tcell.KeyCtrlS {
+			if pageProTree.saveArea.GetDisabled() == true {
+				if pageProTree.descArea.GetDisabled() == false {
+					hideObjDesc()
+				}
+				if pageProTree.nameArea.GetDisabled() == false {
+					hideObjName()
+				}
+				pageProTree.saveArea.SetTitle("save")
+				pageProTree.flTree.AddItem(pageProTree.saveArea, 0, 1, false)
+				app.SetFocus(pageProTree.saveArea)
+				pageProTree.saveArea.SetDisabled(false)
+			} else {
+				hideObjSave()
+			}
+
 		}
 
 		return event
@@ -371,4 +429,57 @@ func objNodeSelectAction(id int) {
 	setObjExec(id)
 	showObjDesc()
 	pageProTree.Pages.SwitchToPage("src")
+}
+
+func hideObjSave() {
+	pageProTree.saveArea.SetDisabled(true)
+
+	path := pageProTree.saveArea.GetText()
+	if len(strings.TrimSpace(path)) > 0 {
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			err := os.Mkdir(path, 0777)
+			check(err)
+		}
+		downloadObj(pageProTree.trPro.GetCurrentNode().GetReference().(int), path)
+	}
+
+	pageProTree.flTree.RemoveItem(pageProTree.saveArea)
+	app.SetFocus(pageProTree.flTree)
+}
+
+func downloadObj(objID int, path string) {
+
+	query := `select name
+				   , object_type
+		from obj
+	  where id = ` + strconv.Itoa(objID)
+
+	objs, err := database.Query(query)
+	check(err)
+
+	objs.Next()
+	var objName sql.NullString
+	var objType sql.NullInt16
+	err = objs.Scan(&objName, &objType)
+	check(err)
+
+	objs.Close()
+
+	objPath := filepath.Join(path, objName.String)
+	switch int(objType.Int16) {
+	case 0:
+
+		err := os.Mkdir(objPath, 0777)
+		check(err)
+
+		downloadFolderPro(objID, objPath)
+	case 1:
+
+		file, err := os.Create(objPath)
+		if err != nil {
+			panic(err)
+		}
+		downloadFilePro(objID, objPath)
+		defer file.Close()
+	}
 }

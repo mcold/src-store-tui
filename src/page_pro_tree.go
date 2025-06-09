@@ -3,7 +3,6 @@ package main
 import (
 	"database/sql"
 	"github.com/atotto/clipboard"
-	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -19,6 +18,7 @@ type pageProTreeType struct {
 	descArea    *tview.TextArea
 	nameArea    *tview.TextArea
 	exportArea  *tview.TextArea
+	importArea  *tview.TextArea
 	curFolderID int
 	flTree      *tview.Flex
 	*tview.Flex
@@ -57,14 +57,10 @@ func (pageProTree *pageProTreeType) build() {
 			delObj(pageProTree.trPro.GetCurrentNode().GetReference().(int))
 			pageProTree.rootPro.ClearChildren()
 			setTreePro(pagePro.lPro.GetCurrentItem())
+			//setTreePro(0)
 			setProComment()
 			pageObjDesc.descArea.SetText("", true)
 		}
-
-		// TODO: make areaView for path
-		//if event.Rune() == 's' && event.Modifiers() == tcell.ModAlt {
-		//	downloadObj(pageProTree.trPro.GetCurrentNode().GetReference().(int), "C:\\Users\\astonuser\\WD\\Go\\pro\\src-tui\\test")
-		//}
 
 		return event
 	})
@@ -132,12 +128,12 @@ func (pageProTree *pageProTreeType) build() {
 	pageProTree.exportArea.SetBorder(true).
 		SetBorderPadding(1, 1, 1, 1).
 		SetBorderColor(tcell.ColorBlue).
-		SetTitle("name").
+		SetTitle("export").
 		SetTitleAlign(tview.AlignLeft)
 
 	pageProTree.exportArea.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyEsc {
-			hideProSave()
+			hideObjExport()
 			return nil
 		}
 		if event.Rune() == 'v' && event.Modifiers() == tcell.ModAlt {
@@ -145,6 +141,31 @@ func (pageProTree *pageProTreeType) build() {
 			check(err)
 
 			pageProTree.exportArea.SetText(pageProTree.exportArea.GetText()+clipBoardContent, true)
+		}
+		return event
+	})
+
+	pageProTree.importArea = tview.NewTextArea()
+	pageProTree.importArea.SetBorderColor(tcell.ColorBlue)
+	pageProTree.importArea.SetBorderPadding(1, 1, 1, 1)
+	pageProTree.importArea.SetDisabled(true)
+
+	pageProTree.importArea.SetBorder(true).
+		SetBorderPadding(1, 1, 1, 1).
+		SetBorderColor(tcell.ColorBlue).
+		SetTitle("import").
+		SetTitleAlign(tview.AlignLeft)
+
+	pageProTree.importArea.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyEsc {
+			hideObjImport()
+			return nil
+		}
+		if event.Rune() == 'v' && event.Modifiers() == tcell.ModAlt {
+			clipBoardContent, err := clipboard.ReadAll()
+			check(err)
+
+			pageProTree.importArea.SetText(pageProTree.importArea.GetText()+clipBoardContent, true)
 		}
 		return event
 	})
@@ -157,7 +178,10 @@ func (pageProTree *pageProTreeType) build() {
 					hideObjName()
 				}
 				if pageProTree.exportArea.GetDisabled() == false {
-					hideObjSave()
+					hideObjExport()
+				}
+				if pageProTree.importArea.GetDisabled() == false {
+					hideObjImport()
 				}
 				pageProTree.flTree.AddItem(pageProTree.descArea, 0, 3, false)
 				pageProTree.descArea.SetText(getObjDesc(), true)
@@ -174,7 +198,10 @@ func (pageProTree *pageProTreeType) build() {
 					hideObjDesc()
 				}
 				if pageProTree.exportArea.GetDisabled() == false {
-					hideObjSave()
+					hideObjExport()
+				}
+				if pageProTree.importArea.GetDisabled() == false {
+					hideObjImport()
 				}
 				pageProTree.nameArea.SetTitle("name")
 				pageProTree.flTree.AddItem(pageProTree.nameArea, 0, 1, false)
@@ -194,16 +221,39 @@ func (pageProTree *pageProTreeType) build() {
 				if pageProTree.nameArea.GetDisabled() == false {
 					hideObjName()
 				}
+				if pageProTree.importArea.GetDisabled() == false {
+					hideObjImport()
+				}
 				pageProTree.exportArea.SetTitle("save")
 				pageProTree.flTree.AddItem(pageProTree.exportArea, 0, 1, false)
 				app.SetFocus(pageProTree.exportArea)
 				pageProTree.exportArea.SetDisabled(false)
 			} else {
-				hideObjSave()
+				hideObjExport()
 			}
 
 		}
 
+		if event.Key() == tcell.KeyInsert {
+			if pageProTree.importArea.GetDisabled() == true {
+				if pageProTree.descArea.GetDisabled() == false {
+					hideObjDesc()
+				}
+				if pageProTree.nameArea.GetDisabled() == false {
+					hideObjName()
+				}
+				if pageProTree.exportArea.GetDisabled() == false {
+					hideObjExport()
+				}
+				pageProTree.importArea.SetTitle("import")
+				pageProTree.flTree.AddItem(pageProTree.importArea, 0, 1, false)
+				app.SetFocus(pageProTree.importArea)
+				pageProTree.importArea.SetDisabled(false)
+			} else {
+				hideObjImport()
+			}
+
+		}
 		return event
 	})
 
@@ -220,8 +270,6 @@ func setTreePro(pos int) {
 					   where (id_parent is null or id_parent = 0)
 						 and id_prj = ` + strconv.Itoa(pagePro.mPosId[pos]) +
 		` order by object_type asc`
-
-	log.Println(queryObject)
 
 	objects, err := database.Query(queryObject)
 	check(err)
@@ -322,7 +370,6 @@ func setObjExec(id int) {
 }
 
 func delObj(idObj int) {
-
 	queryObj := `DELETE FROM obj
 			    WHERE id = ` + strconv.Itoa(idObj)
 
@@ -335,9 +382,6 @@ func delObj(idObj int) {
 	_, err = database.Exec(querySrc)
 	check(err)
 
-	// TODO
-	// bad decision but I don't know how to do it better for now
-	// cause of lock database in cycle
 	for i := 0; i < 10; i++ {
 		delAbsParent()
 	}
@@ -431,7 +475,7 @@ func objNodeSelectAction(id int) {
 	pageProTree.Pages.SwitchToPage("src")
 }
 
-func hideObjSave() {
+func hideObjExport() {
 	pageProTree.exportArea.SetDisabled(true)
 
 	path := pageProTree.exportArea.GetText()
@@ -444,6 +488,22 @@ func hideObjSave() {
 	}
 
 	pageProTree.flTree.RemoveItem(pageProTree.exportArea)
+	app.SetFocus(pageProTree.flTree)
+}
+
+func hideObjImport() {
+	pageProTree.importArea.SetDisabled(true)
+
+	path := pageProTree.importArea.GetText()
+
+	if len(strings.TrimSpace(path)) > 0 {
+		_, err := os.Stat(path)
+		check(err)
+
+		importObj(path)
+	}
+
+	pageProTree.flTree.RemoveItem(pageProTree.importArea)
 	app.SetFocus(pageProTree.flTree)
 }
 

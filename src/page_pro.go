@@ -5,11 +5,11 @@ import (
 	"github.com/atotto/clipboard"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
-	"log"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"unicode"
 )
 
 type pageProType struct {
@@ -18,6 +18,7 @@ type pageProType struct {
 	nameArea   *tview.TextArea
 	exportArea *tview.TextArea
 	importArea *tview.TextArea
+	newArea    *tview.TextArea
 	mPosId     map[int]int
 	flexPro    *tview.Flex
 	flListPro  *tview.Flex
@@ -92,6 +93,25 @@ func (pagePro *pageProType) build() {
 	pagePro.descArea.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyEsc {
 			hideProDesc()
+			return nil
+		}
+		return event
+	})
+
+	pagePro.newArea = tview.NewTextArea()
+	pagePro.newArea.SetBorderColor(tcell.ColorBlue)
+	pagePro.newArea.SetBorderPadding(1, 1, 1, 1)
+	pagePro.newArea.SetDisabled(true)
+
+	pagePro.newArea.SetBorder(true).
+		SetBorderPadding(1, 1, 1, 1).
+		SetBorderColor(tcell.ColorBlue).
+		SetTitle("new").
+		SetTitleAlign(tview.AlignLeft)
+
+	pagePro.newArea.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		if event.Key() == tcell.KeyEsc {
+			hideProNew()
 			return nil
 		}
 		return event
@@ -180,8 +200,11 @@ func (pagePro *pageProType) build() {
 				if pagePro.exportArea.GetDisabled() == false {
 					hideProExport()
 				}
-				if pagePro.exportArea.GetDisabled() == false {
+				if pagePro.importArea.GetDisabled() == false {
 					hideProImport()
+				}
+				if pagePro.newArea.GetDisabled() == false {
+					hideProNew()
 				}
 				pagePro.flListPro.AddItem(pagePro.descArea, 0, 1, false)
 				pagePro.descArea.SetText(getProDesc(), true)
@@ -200,8 +223,11 @@ func (pagePro *pageProType) build() {
 				if pagePro.exportArea.GetDisabled() == false {
 					hideProExport()
 				}
-				if pagePro.exportArea.GetDisabled() == false {
+				if pagePro.importArea.GetDisabled() == false {
 					hideProImport()
+				}
+				if pagePro.newArea.GetDisabled() == false {
+					hideProNew()
 				}
 				pagePro.nameArea.SetTitle("name")
 				pagePro.flListPro.AddItem(pagePro.nameArea, 0, 1, false)
@@ -226,6 +252,9 @@ func (pagePro *pageProType) build() {
 				if pagePro.importArea.GetDisabled() == false {
 					hideProImport()
 				}
+				if pagePro.newArea.GetDisabled() == false {
+					hideProNew()
+				}
 				pagePro.exportArea.SetTitle("export")
 				pagePro.flListPro.AddItem(pagePro.exportArea, 0, 1, false)
 				app.SetFocus(pagePro.exportArea)
@@ -244,13 +273,39 @@ func (pagePro *pageProType) build() {
 				if pagePro.nameArea.GetDisabled() == false {
 					hideProName()
 				}
-				if pagePro.importArea.GetDisabled() == false {
+				if pagePro.exportArea.GetDisabled() == false {
 					hideProExport()
+				}
+				if pagePro.newArea.GetDisabled() == false {
+					hideProNew()
 				}
 				pagePro.importArea.SetTitle("import")
 				pagePro.flListPro.AddItem(pagePro.importArea, 0, 1, false)
 				app.SetFocus(pagePro.importArea)
 				pagePro.importArea.SetDisabled(false)
+			} else {
+				hideProImport()
+			}
+		}
+
+		if event.Key() == tcell.KeyCtrlN {
+			if pagePro.newArea.GetDisabled() == true {
+				if pagePro.descArea.GetDisabled() == false {
+					hideProDesc()
+				}
+				if pagePro.nameArea.GetDisabled() == false {
+					hideProName()
+				}
+				if pagePro.importArea.GetDisabled() == false {
+					hideProExport()
+				}
+				if pagePro.importArea.GetDisabled() == false {
+					hideProExport()
+				}
+				pagePro.newArea.SetTitle("new")
+				pagePro.flListPro.AddItem(pagePro.newArea, 0, 1, false)
+				app.SetFocus(pagePro.newArea)
+				pagePro.newArea.SetDisabled(false)
 			} else {
 				hideProImport()
 			}
@@ -274,6 +329,8 @@ func setListPro() {
 	check(err)
 
 	posNum := 0
+	var lastFirstLetter rune = 0
+
 	for pros.Next() {
 		posNum++
 		var id sql.NullInt64
@@ -282,8 +339,19 @@ func setListPro() {
 		err := pros.Scan(&id, &name, &comment)
 		check(err)
 
+		var currentFirstLetter rune = 0
+		if len(name.String) > 0 {
+			currentFirstLetter = unicode.ToLower(rune(name.String[0]))
+		}
+
+		var displayRune rune = 0
+		if currentFirstLetter != lastFirstLetter {
+			displayRune = currentFirstLetter
+			lastFirstLetter = currentFirstLetter
+		}
+
 		pagePro.mPosId[posNum-1] = int(id.Int64)
-		pagePro.lPro.AddItem(name.String, comment.String, rune(0), func() {})
+		pagePro.lPro.AddItem(name.String, comment.String, displayRune, func() {})
 	}
 
 	pros.Close()
@@ -427,7 +495,6 @@ func hideProExport() {
 }
 
 func hideProImport() {
-	log.Println("hideProImport")
 	pagePro.importArea.SetDisabled(true)
 	curPos := pagePro.lPro.GetCurrentItem()
 
@@ -441,8 +508,6 @@ func hideProImport() {
 		switch {
 		case mode.IsDir():
 			importPrj(path)
-			//err = importDir(path)
-			//check(err)
 		default:
 		}
 	}
@@ -455,6 +520,13 @@ func hideProImport() {
 		setTreePro(curPos)
 		setProComment()
 	}
+}
+
+func hideProNew() {
+	savePrj(pagePro.newArea.GetText())
+	pagePro.flListPro.RemoveItem(pagePro.newArea)
+	reloadProTree()
+	app.SetFocus(pagePro.lPro)
 }
 
 func downloadPrj(pos int, path string) {

@@ -2,11 +2,12 @@ package main
 
 import (
 	"database/sql"
-	"github.com/atotto/clipboard"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	"github.com/atotto/clipboard"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -74,7 +75,7 @@ func (pageProTree *pageProTreeType) build() {
 		AddItem(pageProTree.trPro, 0, 10, true)
 
 	pageProTree.Flex = tview.NewFlex().SetDirection(tview.FlexColumn).
-		AddItem(pageProTree.flTree, 0, 4, true).
+		AddItem(pageProTree.flTree, 0, 2, true).
 		AddItem(pageProTree.Pages, 0, 7, false)
 
 	pageProTree.descArea = tview.NewTextArea()

@@ -5,6 +5,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"strconv"
+	"strings"
 )
 
 type pageObjDescType struct {
@@ -28,6 +29,7 @@ func (pageObjDesc *pageObjDescType) build() {
 		if event.Rune() == 's' && event.Modifiers() == tcell.ModAlt {
 			saveObjDesc()
 			pageObjDesc.descArea.SetText("", true)
+			beforeSwitch()
 			pageProTree.Pages.SwitchToPage("src")
 			if pageSrc.lSrc.GetItemCount() > 0 {
 				pageSrc.lSrc.SetCurrentItem(1)
@@ -37,23 +39,29 @@ func (pageObjDesc *pageObjDescType) build() {
 		return event
 	})
 
+	pageObjDesc.descArea.SetTitle("F6").
+		SetTitleAlign(tview.AlignLeft)
+
 	pageObjDesc.Flex = tview.NewFlex().SetDirection(tview.FlexColumn).
 		AddItem(pageObjDesc.descArea, 0, 1, true)
 
-	pageObjDesc.Flex.SetTitle("F4").
+	pageObjDesc.Flex.SetTitle("F6").
 		SetTitleAlign(tview.AlignLeft)
 
 	pageProTree.Pages.AddPage("proObjDesc", pageObjDesc.Flex, true, false)
 }
 
 func saveObjDesc() {
-	query := "UPDATE obj" + "\n" +
-		"SET comment = '" + pageObjDesc.descArea.GetText() + "'\n" +
-		"WHERE id = " + strconv.Itoa(pageProTree.trPro.GetCurrentNode().GetReference().(int))
+	desc := pageObjDesc.descArea.GetText()
+	if len(strings.TrimSpace(desc)) > 0 {
+		query := "UPDATE obj" + "\n" +
+			"SET comment = '" + pageObjDesc.descArea.GetText() + "'\n" +
+			"WHERE id = " + strconv.Itoa(pageProTree.trPro.GetCurrentNode().GetReference().(int))
 
-	_, err := database.Exec(query, "PRAGMA busy_timeout=30000;")
-	check(err)
-
+		pageObjDesc.descArea.SetText("", true)
+		_, err := database.Exec(query, "PRAGMA busy_timeout=30000;")
+		check(err)
+	}
 }
 
 func (pageObjDesc *pageObjDescType) show() {

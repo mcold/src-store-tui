@@ -259,7 +259,7 @@ func hideSrcDesc() {
 
 func hideSrcName() {
 	pageSrc.nameArea.SetDisabled(true)
-	//curPos := pageSrc.lSrc.GetCurrentItem()
+
 	saveSrcName()
 	pageSrc.Flex.RemoveItem(pageSrc.nameArea)
 	pageSrc.show()

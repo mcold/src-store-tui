@@ -34,18 +34,25 @@ func (application *applicationType) registerGlobalShortcuts() {
 	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
 		case tcell.KeyCtrlC:
+			beforeSwitch()
 			application.ConfirmQuit()
 		case tcell.KeyF2:
+			beforeSwitch()
 			app.SetFocus(pagePro.lPro)
 		case tcell.KeyF3:
+			beforeSwitch()
 			pageProTree.show()
 		case tcell.KeyF4:
+			beforeSwitch()
 			pageSrc.show()
 		case tcell.KeyF5:
+			beforeSwitch()
 			pageProDesc.show()
 		case tcell.KeyF6:
+			beforeSwitch()
 			pageObjDesc.show()
 		case tcell.KeyF10:
+			beforeSwitch()
 			pageExec.show()
 		case tcell.KeyF11:
 			pagePro.flexPro.RemoveItem(pagePro.flListPro)
@@ -72,4 +79,8 @@ func (application *applicationType) Quit() {
 		database.DB.Close()
 	}
 	app.Stop()
+}
+
+func beforeSwitch() {
+	saveObjDesc()
 }

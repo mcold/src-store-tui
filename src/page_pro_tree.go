@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"log"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -232,28 +233,10 @@ func (pageProTree *pageProTreeType) build() {
 			} else {
 				hideObjExport()
 			}
-
 		}
 
 		if event.Key() == tcell.KeyInsert {
-			if pageProTree.importArea.GetDisabled() == true {
-				if pageProTree.descArea.GetDisabled() == false {
-					hideObjDesc()
-				}
-				if pageProTree.nameArea.GetDisabled() == false {
-					hideObjName()
-				}
-				if pageProTree.exportArea.GetDisabled() == false {
-					hideObjExport()
-				}
-				pageProTree.importArea.SetTitle("import")
-				pageProTree.flTree.AddItem(pageProTree.importArea, 0, 1, false)
-				app.SetFocus(pageProTree.importArea)
-				pageProTree.importArea.SetDisabled(false)
-			} else {
-				hideObjImport()
-			}
-
+			importFolder()
 		}
 		return event
 	})
@@ -271,6 +254,8 @@ func setTreePro(pos int) {
 					   where (id_parent is null or id_parent = 0)
 						 and id_prj = ` + strconv.Itoa(pagePro.mPosId[pos]) +
 		` order by object_type asc`
+
+	log.Println(queryObject)
 
 	objects, err := database.Query(queryObject)
 	check(err)
@@ -542,5 +527,24 @@ func downloadObj(objID int, path string) {
 		}
 		downloadFilePro(objID, objPath)
 		defer file.Close()
+	}
+}
+
+func importFolder() {
+
+	path, err := clipboard.ReadAll()
+	check(err)
+
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		check(err)
+	}
+	check(err)
+
+	if len(strings.TrimSpace(path)) > 0 {
+		_, err := os.Stat(path)
+		check(err)
+
+		err = importObj(path)
+		check(err)
 	}
 }

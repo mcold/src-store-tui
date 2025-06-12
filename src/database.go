@@ -88,8 +88,10 @@ func saveObj(objName string, prjID int, parentID int, objType int) {
 }
 
 func saveSrc(idFile int, num int, line string) {
+	log.Println("saveSrc")
 	query := fmt.Sprintf("INSERT INTO SRC (id_prj, id_file, num, line) VALUES ( %d, %d, %d, '%s');\n",
 		prjID, idFile, num, line)
+	log.Println(query)
 
 	_, err := database.Exec(query)
 	check(err)

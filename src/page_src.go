@@ -2,8 +2,10 @@ package main
 
 import (
 	"database/sql"
+	"github.com/atotto/clipboard"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
+	"log"
 	"strconv"
 	"strings"
 )
@@ -82,6 +84,7 @@ func (pageSrc *pageSrcType) build() {
 
 		if event.Key() == tcell.KeyDelete {
 			delSrc()
+			sanitizeFileSrcLines()
 			pageSrc.lSrc.Clear()
 			setFileSrc(pageProTree.trPro.GetCurrentNode().GetReference().(int))
 			if pageSrc.lSrc.GetItemCount() > pageSrc.curPos {
@@ -117,6 +120,22 @@ func (pageSrc *pageSrcType) build() {
 			}
 		}
 
+		if event.Key() == tcell.KeyCtrlO {
+			insertEmptyAfter()
+			pageSrc.curPos = pageSrc.curPos + 1
+			pageSrc.lSrc.SetCurrentItem(pageSrc.curPos)
+			app.SetFocus(pageSrc.nameArea)
+			pageSrc.Flex.AddItem(pageSrc.nameArea, 0, 1, false)
+			srcName, _ := pageSrc.lSrc.GetItemText(pageSrc.lSrc.GetCurrentItem())
+			pageSrc.nameArea.SetText(srcName+" ", false)
+			app.SetFocus(pageSrc.nameArea)
+			pageSrc.nameArea.SetDisabled(false)
+		}
+
+		if event.Key() == tcell.KeyInsert {
+			importSrc()
+		}
+
 		return event
 	})
 
@@ -131,6 +150,9 @@ func setFileSrc(idFile int) {
 				from src
 			   where id_file = ` + strconv.Itoa(idFile) +
 		` order by num asc`
+
+	log.Println("setFileSrc")
+	log.Print(query)
 
 	lines, err := database.Query(query)
 	check(err)
@@ -161,6 +183,18 @@ func delSrc() {
 	query := `DELETE FROM src
 			  WHERE id = ` + strconv.Itoa(pageSrc.mPosId[pageSrc.curPos])
 
+	_, err := database.Exec(query)
+	check(err)
+}
+
+func updUppNum(nums int) {
+	log.Println("updUppNum", nums)
+	query := `UPDATE src
+    			 SET num = num + ` + strconv.Itoa(nums) +
+		` where id_file = ` + strconv.Itoa(pageProTree.trPro.GetCurrentNode().GetReference().(int)) +
+		` and num >= ` + strconv.Itoa(pageSrc.curPos+2)
+
+	log.Println(query)
 	_, err := database.Exec(query)
 	check(err)
 }
@@ -225,10 +259,61 @@ func hideSrcDesc() {
 
 func hideSrcName() {
 	pageSrc.nameArea.SetDisabled(true)
-	curPos := pageSrc.lSrc.GetCurrentItem()
+	//curPos := pageSrc.lSrc.GetCurrentItem()
 	saveSrcName()
 	pageSrc.Flex.RemoveItem(pageSrc.nameArea)
 	pageSrc.show()
-	pageSrc.lSrc.SetCurrentItem(curPos)
+	pageSrc.lSrc.SetCurrentItem(pageSrc.curPos)
 	app.SetFocus(pageSrc.lSrc)
+}
+
+func importSrc() {
+	content, err := clipboard.ReadAll()
+	check(err)
+
+	prjID = pagePro.mPosId[pagePro.lPro.GetCurrentItem()]
+	curFileID = pageProTree.trPro.GetCurrentNode().GetReference().(int)
+
+	lines := strings.Split(content, "\n")
+	updUppNum(len(lines))
+	for i, line := range lines {
+		escapedLine := sanitizeString(line)
+		saveSrc(curFileID, pageSrc.curPos+2+i, escapedLine)
+	}
+	sanitizeFileSrcLines()
+
+	curPos := pageSrc.lSrc.GetCurrentItem()
+	pageSrc.show()
+	pageSrc.lSrc.SetCurrentItem(curPos)
+}
+
+func sanitizeFileSrcLines() {
+	query := `WITH numbered_rows AS (
+				  SELECT 
+					id,
+					ROW_NUMBER() OVER (ORDER BY num ASC) AS new_num
+				  FROM src
+				  WHERE id_file = ` + strconv.Itoa(pageProTree.trPro.GetCurrentNode().GetReference().(int)) + `
+				)
+			UPDATE src
+			SET num = nr.new_num
+			FROM numbered_rows nr
+			WHERE src.id = nr.id
+			AND src.id_file = ` + strconv.Itoa(pageProTree.trPro.GetCurrentNode().GetReference().(int))
+	_, err := database.Exec(query)
+	check(err)
+}
+
+func insertEmptyAfter() {
+	prjID = pagePro.mPosId[pagePro.lPro.GetCurrentItem()]
+	curFileID = pageProTree.trPro.GetCurrentNode().GetReference().(int)
+
+	updUppNum(1)
+	saveSrc(curFileID, pageSrc.curPos+2, "")
+	sanitizeFileSrcLines()
+
+	curPos := pageSrc.lSrc.GetCurrentItem()
+	pageSrc.show()
+	pageSrc.lSrc.SetCurrentItem(curPos)
+
 }

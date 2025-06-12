@@ -17,7 +17,6 @@ type pageProType struct {
 	descArea   *tview.TextArea
 	nameArea   *tview.TextArea
 	exportArea *tview.TextArea
-	importArea *tview.TextArea
 	newArea    *tview.TextArea
 	mPosId     map[int]int
 	flexPro    *tview.Flex
@@ -161,31 +160,6 @@ func (pagePro *pageProType) build() {
 		return event
 	})
 
-	pagePro.importArea = tview.NewTextArea()
-	pagePro.importArea.SetBorderColor(tcell.ColorBlue)
-	pagePro.importArea.SetBorderPadding(1, 1, 1, 1)
-	pagePro.importArea.SetDisabled(true)
-
-	pagePro.importArea.SetBorder(true).
-		SetBorderPadding(1, 1, 1, 1).
-		SetBorderColor(tcell.ColorBlue).
-		SetTitle("name").
-		SetTitleAlign(tview.AlignLeft)
-
-	pagePro.importArea.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		if event.Key() == tcell.KeyEsc {
-			hideProImport()
-			return nil
-		}
-		if event.Rune() == 'v' && event.Modifiers() == tcell.ModAlt {
-			clipBoardContent, err := clipboard.ReadAll()
-			check(err)
-
-			pagePro.importArea.SetText(pagePro.importArea.GetText()+clipBoardContent, true)
-		}
-		return event
-	})
-
 	pagePro.flexPro = tview.NewFlex().SetDirection(tview.FlexColumn).
 		AddItem(pagePro.flListPro, 0, 1, true).
 		AddItem(pagePro.Pages, 0, 4, true)
@@ -199,9 +173,6 @@ func (pagePro *pageProType) build() {
 				}
 				if pagePro.exportArea.GetDisabled() == false {
 					hideProExport()
-				}
-				if pagePro.importArea.GetDisabled() == false {
-					hideProImport()
 				}
 				if pagePro.newArea.GetDisabled() == false {
 					hideProNew()
@@ -222,9 +193,6 @@ func (pagePro *pageProType) build() {
 				}
 				if pagePro.exportArea.GetDisabled() == false {
 					hideProExport()
-				}
-				if pagePro.importArea.GetDisabled() == false {
-					hideProImport()
 				}
 				if pagePro.newArea.GetDisabled() == false {
 					hideProNew()
@@ -249,9 +217,6 @@ func (pagePro *pageProType) build() {
 				if pagePro.nameArea.GetDisabled() == false {
 					hideProName()
 				}
-				if pagePro.importArea.GetDisabled() == false {
-					hideProImport()
-				}
 				if pagePro.newArea.GetDisabled() == false {
 					hideProNew()
 				}
@@ -261,30 +226,6 @@ func (pagePro *pageProType) build() {
 				pagePro.exportArea.SetDisabled(false)
 			} else {
 				hideProExport()
-			}
-
-		}
-
-		if event.Key() == tcell.KeyInsert {
-			if pagePro.importArea.GetDisabled() == true {
-				if pagePro.descArea.GetDisabled() == false {
-					hideProDesc()
-				}
-				if pagePro.nameArea.GetDisabled() == false {
-					hideProName()
-				}
-				if pagePro.exportArea.GetDisabled() == false {
-					hideProExport()
-				}
-				if pagePro.newArea.GetDisabled() == false {
-					hideProNew()
-				}
-				pagePro.importArea.SetTitle("import")
-				pagePro.flListPro.AddItem(pagePro.importArea, 0, 1, false)
-				app.SetFocus(pagePro.importArea)
-				pagePro.importArea.SetDisabled(false)
-			} else {
-				hideProImport()
 			}
 		}
 
@@ -296,19 +237,20 @@ func (pagePro *pageProType) build() {
 				if pagePro.nameArea.GetDisabled() == false {
 					hideProName()
 				}
-				if pagePro.importArea.GetDisabled() == false {
-					hideProExport()
-				}
-				if pagePro.importArea.GetDisabled() == false {
-					hideProExport()
+				if pagePro.exportArea.GetDisabled() == false {
+					hideProName()
 				}
 				pagePro.newArea.SetTitle("new")
 				pagePro.flListPro.AddItem(pagePro.newArea, 0, 1, false)
 				app.SetFocus(pagePro.newArea)
 				pagePro.newArea.SetDisabled(false)
 			} else {
-				hideProImport()
+				hideProNew()
 			}
+		}
+
+		if event.Key() == tcell.KeyInsert {
+			importPro()
 		}
 
 		return event
@@ -323,7 +265,7 @@ func setListPro() {
 				   , name
 				   , comment
 				from prj
-			   order by name`
+			   order by lower(name)`
 
 	pros, err := database.Query(query)
 	check(err)
@@ -494,11 +436,17 @@ func hideProExport() {
 	app.SetFocus(pagePro.lPro)
 }
 
-func hideProImport() {
-	pagePro.importArea.SetDisabled(true)
+func importPro() {
+
 	curPos := pagePro.lPro.GetCurrentItem()
 
-	path := pagePro.importArea.GetText()
+	path, err := clipboard.ReadAll()
+	check(err)
+
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		check(err)
+	}
+	check(err)
 
 	if len(strings.TrimSpace(path)) > 0 {
 		objInfo, err := os.Stat(path)
@@ -509,10 +457,10 @@ func hideProImport() {
 		case mode.IsDir():
 			importPrj(path)
 		default:
+			return
 		}
 	}
 
-	pagePro.flListPro.RemoveItem(pagePro.importArea)
 	reloadProTree()
 	app.SetFocus(pagePro.lPro)
 	if pagePro.lPro.GetItemCount() > curPos {

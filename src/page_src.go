@@ -14,6 +14,7 @@ type pageSrcType struct {
 	lSrc     *tview.List
 	descArea *tview.TextArea
 	nameArea *tview.TextArea
+	statArea *tview.TextArea
 	mPosId   map[int]int
 	curPos   int
 	*tview.Flex
@@ -25,9 +26,6 @@ func (pageSrc *pageSrcType) build() {
 	pageSrc.mPosId = make(map[int]int)
 
 	pageSrc.lSrc = tview.NewList()
-
-	pageSrc.lSrc.SetBorder(true).
-		SetBorderColor(tcell.ColorBlue)
 
 	pageSrc.lSrc.ShowSecondaryText(true).
 		SetBorderPadding(1, 1, 1, 1)
@@ -71,14 +69,28 @@ func (pageSrc *pageSrcType) build() {
 		return event
 	})
 
+	pageSrc.statArea = tview.NewTextArea()
+	pageSrc.statArea.SetBorderColor(tcell.ColorBlue)
+	pageSrc.statArea.SetBorderPadding(1, 1, 1, 1)
+	pageSrc.statArea.SetBorder(false)
+
 	pageSrc.lSrc.SetSelectedFunc(func(i int, s string, s2 string, r rune) {
 		pageSrc.nameArea.SetText(s, true)
 		pageSrc.descArea.SetText(s2, true)
 		pageSrc.curPos = pageSrc.lSrc.GetCurrentItem()
+
+		pageSrc.statArea.SetText(strconv.Itoa(pageSrc.lSrc.GetItemCount())+": "+strconv.Itoa(i+1), true)
 	})
 
 	pageSrc.Flex = tview.NewFlex().SetDirection(tview.FlexRow).
-		AddItem(pageSrc.lSrc, 0, 10, true)
+		AddItem(pageSrc.lSrc, 0, 17, true).
+		AddItem(pageSrc.statArea, 0, 1, false)
+
+	pageSrc.Flex.SetBorder(true).
+		SetBorderColor(tcell.ColorBlue)
+
+	pageSrc.Flex.SetTitle("F4").
+		SetTitleAlign(tview.AlignLeft)
 
 	pageSrc.Flex.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 
@@ -93,29 +105,33 @@ func (pageSrc *pageSrcType) build() {
 		}
 		if event.Key() == tcell.KeyCtrlQ {
 			if pageSrc.descArea.GetDisabled() == true {
+				statHide()
 				if pageSrc.nameArea.GetDisabled() == false {
 					hideSrcName()
 				}
-				pageSrc.Flex.AddItem(pageSrc.descArea, 0, 1, false)
+				pageSrc.Flex.AddItem(pageSrc.descArea, 0, 2, false)
 				pageSrc.descArea.SetText(getSrcDesc(), true)
 				app.SetFocus(pageSrc.descArea)
 				pageSrc.descArea.SetDisabled(false)
 				saveSrcDesc()
 			} else {
+				statHide()
 				hideSrcDesc()
 			}
 		}
 		if event.Key() == tcell.KeyCtrlW {
 			if pageSrc.nameArea.GetDisabled() == true {
+				statHide()
 				if pageSrc.descArea.GetDisabled() == false {
 					hideSrcDesc()
 				}
-				pageSrc.Flex.AddItem(pageSrc.nameArea, 0, 1, false)
+				pageSrc.Flex.AddItem(pageSrc.nameArea, 0, 2, false)
 				srcName, _ := pageSrc.lSrc.GetItemText(pageSrc.lSrc.GetCurrentItem())
 				pageSrc.nameArea.SetText(srcName+" ", false)
 				app.SetFocus(pageSrc.nameArea)
 				pageSrc.nameArea.SetDisabled(false)
 			} else {
+				statHide()
 				hideSrcName()
 			}
 		}
@@ -134,6 +150,14 @@ func (pageSrc *pageSrcType) build() {
 
 		if event.Key() == tcell.KeyInsert {
 			importSrc()
+		}
+
+		if event.Key() == tcell.KeyDown {
+			log.Println("key down pressed")
+		}
+
+		if event.Key() == tcell.KeyUp {
+			log.Println("key up pressed")
 		}
 
 		return event
@@ -252,6 +276,7 @@ func hideSrcDesc() {
 	curPos := pageSrc.lSrc.GetCurrentItem()
 	saveSrcDesc()
 	pageSrc.Flex.RemoveItem(pageSrc.descArea)
+	statShow()
 	pageSrc.show()
 	pageSrc.lSrc.SetCurrentItem(curPos)
 	app.SetFocus(pageSrc.lSrc)
@@ -262,6 +287,7 @@ func hideSrcName() {
 
 	saveSrcName()
 	pageSrc.Flex.RemoveItem(pageSrc.nameArea)
+	statShow()
 	pageSrc.show()
 	pageSrc.lSrc.SetCurrentItem(pageSrc.curPos)
 	app.SetFocus(pageSrc.lSrc)
@@ -315,5 +341,20 @@ func insertEmptyAfter() {
 	curPos := pageSrc.lSrc.GetCurrentItem()
 	pageSrc.show()
 	pageSrc.lSrc.SetCurrentItem(curPos)
+
+}
+
+func statHide() {
+	pageSrc.Flex.RemoveItem(pageSrc.statArea)
+	pageSrc.Flex.SetBorder(false)
+	pageSrc.lSrc.SetBorder(true)
+	pageSrc.lSrc.SetBorderColor(tcell.ColorBlue)
+}
+
+func statShow() {
+	pageSrc.Flex.AddItem(pageSrc.statArea, 0, 1, false)
+	pageSrc.Flex.SetBorderColor(tcell.ColorBlue)
+	pageSrc.Flex.SetBorder(true)
+	pageSrc.lSrc.SetBorder(false)
 
 }

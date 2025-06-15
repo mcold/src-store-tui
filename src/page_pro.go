@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"github.com/atotto/clipboard"
 	"github.com/gdamore/tcell/v2"
+	"github.com/go-vgo/robotgo"
 	"github.com/rivo/tview"
 	"os"
 	"path/filepath"
@@ -206,7 +207,6 @@ func (pagePro *pageProType) build() {
 			} else {
 				hideProName()
 			}
-
 		}
 
 		if event.Key() == tcell.KeyCtrlS {
@@ -251,6 +251,10 @@ func (pagePro *pageProType) build() {
 
 		if event.Key() == tcell.KeyInsert {
 			importPro()
+		}
+
+		if event.Key() == tcell.KeyDown || event.Key() == tcell.KeyUp {
+			robotgo.KeyTap("Enter")
 		}
 
 		return event

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"github.com/atotto/clipboard"
 	"github.com/gdamore/tcell/v2"
+	"github.com/go-vgo/robotgo"
 	"github.com/rivo/tview"
 	"log"
 	"strconv"
@@ -11,12 +12,15 @@ import (
 )
 
 type pageSrcType struct {
-	lSrc     *tview.List
-	descArea *tview.TextArea
-	nameArea *tview.TextArea
-	statArea *tview.TextArea
-	mPosId   map[int]int
-	curPos   int
+	lSrc         *tview.List
+	descArea     *tview.TextArea
+	nameArea     *tview.TextArea
+	findArea     *tview.TextArea
+	statArea     *tview.TextArea
+	mPosId       map[int]int
+	curPos       int
+	findArr      []int
+	importantArr []int
 	*tview.Flex
 }
 
@@ -24,6 +28,7 @@ var pageSrc pageSrcType
 
 func (pageSrc *pageSrcType) build() {
 	pageSrc.mPosId = make(map[int]int)
+	pageSrc.importantArr = make([]int, 0)
 
 	pageSrc.lSrc = tview.NewList()
 
@@ -44,10 +49,18 @@ func (pageSrc *pageSrcType) build() {
 		SetTitle("comment").
 		SetTitleAlign(tview.AlignLeft)
 
+	pageSrc.descArea.SetDisabled(true)
+
 	pageSrc.descArea.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyEsc {
 			hideSrcDesc()
 			return nil
+		}
+		if event.Key() == tcell.KeyEnter {
+			descText := strings.Trim(pageSrc.descArea.GetText(), " ")
+			arr := strings.Split(descText, "\n")
+			pageSrc.descArea.SetText(arr[0], true)
+			hideSrcDesc()
 		}
 		return event
 	})
@@ -61,11 +74,52 @@ func (pageSrc *pageSrcType) build() {
 		SetTitle("name").
 		SetTitleAlign(tview.AlignLeft)
 
+	pageSrc.nameArea.SetDisabled(true)
+
 	pageSrc.nameArea.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyEsc {
 			hideSrcName()
 			return nil
 		}
+		if event.Key() == tcell.KeyEnter {
+			nameText := pageSrc.nameArea.GetText()
+			arr := strings.Split(nameText, "\n")
+			pageSrc.nameArea.SetText(arr[0], true)
+			hideSrcName()
+		}
+		return event
+	})
+
+	pageSrc.findArea = tview.NewTextArea()
+	pageSrc.findArea.SetBorderColor(tcell.ColorBlue)
+	pageSrc.findArea.SetBorderPadding(1, 1, 1, 1)
+	pageSrc.findArea.SetBorder(true).
+		SetBorderPadding(1, 1, 1, 1).
+		SetBorderColor(tcell.ColorBlue).
+		SetTitle("find").
+		SetTitleAlign(tview.AlignLeft)
+
+	pageSrc.findArea.SetDisabled(true)
+
+	pageSrc.findArea.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+
+		if event.Key() == tcell.KeyEnter {
+			searchText := strings.Trim(pageSrc.findArea.GetText(), " ")
+			arr := strings.Split(searchText, "\n")
+			pageSrc.findArea.SetText(arr[0], true)
+			app.SetFocus(pageSrc.findArea)
+
+			pageSrc.findArr = pageSrc.lSrc.FindItems(searchText, searchText, false, true)
+			setFoundLine(true)
+			pageSrc.findArea.SetText("", true)
+			hideSrcFind()
+		}
+
+		if event.Key() == tcell.KeyEsc {
+			hideSrcFind()
+			return nil
+		}
+
 		return event
 	})
 
@@ -94,20 +148,14 @@ func (pageSrc *pageSrcType) build() {
 
 	pageSrc.Flex.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 
-		if event.Key() == tcell.KeyDelete {
-			delSrc()
-			sanitizeFileSrcLines()
-			pageSrc.lSrc.Clear()
-			setFileSrc(pageProTree.trPro.GetCurrentNode().GetReference().(int))
-			if pageSrc.lSrc.GetItemCount() > pageSrc.curPos {
-				pageSrc.lSrc.SetCurrentItem(pageSrc.curPos)
-			}
-		}
 		if event.Key() == tcell.KeyCtrlQ {
 			if pageSrc.descArea.GetDisabled() == true {
 				statHide()
 				if pageSrc.nameArea.GetDisabled() == false {
 					hideSrcName()
+				}
+				if pageSrc.findArea.GetDisabled() == false {
+					hideSrcFind()
 				}
 				pageSrc.Flex.AddItem(pageSrc.descArea, 0, 2, false)
 				pageSrc.descArea.SetText(getSrcDesc(), true)
@@ -115,15 +163,45 @@ func (pageSrc *pageSrcType) build() {
 				pageSrc.descArea.SetDisabled(false)
 				saveSrcDesc()
 			} else {
-				statHide()
 				hideSrcDesc()
 			}
 		}
+
+		if event.Key() == tcell.KeyCtrlF {
+			pageSrc.findArea.SetText("", true)
+			if pageSrc.findArea.GetDisabled() == true {
+				statHide()
+				if pageSrc.descArea.GetDisabled() == false {
+					hideSrcDesc()
+				}
+				if pageSrc.nameArea.GetDisabled() == false {
+					hideSrcName()
+				}
+				pageSrc.Flex.AddItem(pageSrc.findArea, 0, 2, false)
+				app.SetFocus(pageSrc.findArea)
+				pageSrc.findArea.SetDisabled(false)
+			} else {
+				hideSrcFind()
+			}
+
+		}
+
+		if event.Key() == tcell.KeyCtrlO {
+			insertEmptyAfter()
+			pageSrc.curPos = pageSrc.lSrc.GetCurrentItem() + 1
+			pageSrc.lSrc.SetCurrentItem(pageSrc.curPos)
+			err := robotgo.KeyTap("Enter")
+			check(err)
+		}
+
 		if event.Key() == tcell.KeyCtrlW {
 			if pageSrc.nameArea.GetDisabled() == true {
 				statHide()
 				if pageSrc.descArea.GetDisabled() == false {
 					hideSrcDesc()
+				}
+				if pageSrc.findArea.GetDisabled() == false {
+					hideSrcFind()
 				}
 				pageSrc.Flex.AddItem(pageSrc.nameArea, 0, 2, false)
 				srcName, _ := pageSrc.lSrc.GetItemText(pageSrc.lSrc.GetCurrentItem())
@@ -136,28 +214,53 @@ func (pageSrc *pageSrcType) build() {
 			}
 		}
 
-		if event.Key() == tcell.KeyCtrlO {
-			insertEmptyAfter()
-			pageSrc.curPos = pageSrc.curPos + 1
-			pageSrc.lSrc.SetCurrentItem(pageSrc.curPos)
-			app.SetFocus(pageSrc.nameArea)
-			pageSrc.Flex.AddItem(pageSrc.nameArea, 0, 1, false)
-			srcName, _ := pageSrc.lSrc.GetItemText(pageSrc.lSrc.GetCurrentItem())
-			pageSrc.nameArea.SetText(srcName+" ", false)
-			app.SetFocus(pageSrc.nameArea)
-			pageSrc.nameArea.SetDisabled(false)
+		if event.Key() == tcell.KeyDelete {
+			delSrc()
+			sanitizeFileSrcLines()
+			pageSrc.lSrc.Clear()
+			setFileSrc(pageProTree.trPro.GetCurrentNode().GetReference().(int))
+			if pageSrc.lSrc.GetItemCount() > pageSrc.curPos {
+				pageSrc.lSrc.SetCurrentItem(pageSrc.curPos)
+			}
 		}
 
-		if event.Key() == tcell.KeyInsert {
-			importSrc()
+		if event.Key() == tcell.KeyCtrlI {
+			setNextImportantLine(true)
 		}
 
-		if event.Key() == tcell.KeyDown {
-			log.Println("key down pressed")
+		if event.Key() == tcell.KeyCtrlE {
+			contentArr := make([]string, 0)
+			for ind := range pageSrc.lSrc.GetItemCount() {
+				line, _ := pageSrc.lSrc.GetItemText(ind)
+				contentArr = append(contentArr, line)
+			}
+
+			joined := strings.Join(contentArr, "\n")
+			err := clipboard.WriteAll(joined)
+			check(err)
 		}
 
-		if event.Key() == tcell.KeyUp {
-			log.Println("key up pressed")
+		if event.Key() == tcell.KeyCtrlN {
+			setFoundLine(true)
+		}
+
+		if event.Key() == tcell.KeyCtrlP {
+			setFoundLine(false)
+		}
+
+		if event.Key() == tcell.KeyDown || event.Key() == tcell.KeyUp || event.Key() == tcell.KeyPgDn || event.Key() == tcell.KeyPgUp {
+			err := robotgo.KeyTap("Enter")
+			check(err)
+		}
+
+		if event.Key() == tcell.KeyTab {
+			err := robotgo.KeyTap("Enter")
+			check(err)
+		}
+
+		if event.Modifiers() == tcell.ModShift && event.Key() == tcell.KeyTab {
+			err := robotgo.KeyTap("Enter")
+			check(err)
 		}
 
 		return event
@@ -167,6 +270,7 @@ func (pageSrc *pageSrcType) build() {
 }
 
 func setFileSrc(idFile int) {
+	pageSrc.importantArr = make([]int, 0)
 
 	query := `select id
 				   , line
@@ -174,9 +278,6 @@ func setFileSrc(idFile int) {
 				from src
 			   where id_file = ` + strconv.Itoa(idFile) +
 		` order by num asc`
-
-	log.Println("setFileSrc")
-	log.Print(query)
 
 	lines, err := database.Query(query)
 	check(err)
@@ -197,10 +298,14 @@ func setFileSrc(idFile int) {
 		if n < 0 {
 			n = 0
 		}
+		if len(strings.TrimSpace(comment.String)) > 0 {
+			pageSrc.importantArr = append(pageSrc.importantArr, posNum)
+		}
 		pageSrc.lSrc.AddItem(lineName, strings.Repeat(" ", n)+strings.TrimSpace(comment.String), rune(0), func() {})
 	}
 
 	lines.Close()
+	statShow()
 }
 
 func delSrc() {
@@ -227,6 +332,11 @@ func (pageSrc *pageSrcType) show() {
 	pageProTree.Pages.SwitchToPage("src")
 	pageSrc.lSrc.Clear()
 	setFileSrc(pageProTree.trPro.GetCurrentNode().GetReference().(int))
+	if pageSrc.lSrc.GetItemCount() > 0 {
+		pageSrc.curPos = 0
+		pageSrc.lSrc.SetCurrentItem(pageSrc.curPos)
+	}
+
 	app.SetFocus(pageSrc.Flex)
 }
 
@@ -234,7 +344,7 @@ func saveSrcDesc() {
 	var query string
 	query = "UPDATE src" + "\n" +
 		"SET comment = '" + pageSrc.descArea.GetText() + "'\n" +
-		"WHERE id = " + strconv.Itoa(pageSrc.mPosId[pageSrc.curPos])
+		"WHERE id = " + strconv.Itoa(pageSrc.mPosId[pageSrc.lSrc.GetCurrentItem()])
 
 	_, err := database.Exec(query)
 	check(err)
@@ -248,7 +358,7 @@ func saveSrcName() {
 	}
 	query = "UPDATE src" + "\n" +
 		"SET line = '" + val + "'\n" +
-		"WHERE id = " + strconv.Itoa(pageSrc.mPosId[pageSrc.curPos])
+		"WHERE id = " + strconv.Itoa(pageSrc.mPosId[pageSrc.lSrc.GetCurrentItem()])
 
 	_, err := database.Exec(query)
 	check(err)
@@ -282,14 +392,25 @@ func hideSrcDesc() {
 	app.SetFocus(pageSrc.lSrc)
 }
 
+func hideSrcFind() {
+	pageSrc.curPos = pageSrc.lSrc.GetCurrentItem()
+	pageSrc.findArea.SetDisabled(true)
+	pageSrc.lSrc.SetCurrentItem(pageSrc.curPos)
+	pageSrc.Flex.RemoveItem(pageSrc.findArea)
+	statShow()
+
+	app.SetFocus(pageSrc.lSrc)
+}
+
 func hideSrcName() {
 	pageSrc.nameArea.SetDisabled(true)
 
 	saveSrcName()
 	pageSrc.Flex.RemoveItem(pageSrc.nameArea)
 	statShow()
+	curPos := pageSrc.lSrc.GetCurrentItem()
 	pageSrc.show()
-	pageSrc.lSrc.SetCurrentItem(pageSrc.curPos)
+	pageSrc.lSrc.SetCurrentItem(curPos)
 	app.SetFocus(pageSrc.lSrc)
 }
 
@@ -352,9 +473,76 @@ func statHide() {
 }
 
 func statShow() {
-	pageSrc.Flex.AddItem(pageSrc.statArea, 0, 1, false)
-	pageSrc.Flex.SetBorderColor(tcell.ColorBlue)
-	pageSrc.Flex.SetBorder(true)
-	pageSrc.lSrc.SetBorder(false)
+	if pageSrc.statArea.GetDisabled() == true {
+		pageSrc.Flex.AddItem(pageSrc.statArea, 0, 1, false)
+		pageSrc.Flex.SetBorderColor(tcell.ColorBlue)
+		pageSrc.Flex.SetBorder(true)
+		pageSrc.lSrc.SetBorder(false)
 
+		pageSrc.statArea.SetText(strconv.Itoa(pageSrc.lSrc.GetItemCount())+": "+strconv.Itoa(1), true)
+		pageSrc.statArea.SetDisabled(false)
+	}
+}
+
+func setFoundLine(bStraightWay bool) {
+	bFound := false
+	if bStraightWay {
+		for ind := range pageSrc.findArr {
+			if pageSrc.findArr[ind] > pageSrc.lSrc.GetCurrentItem() {
+				pageSrc.lSrc.SetCurrentItem(pageSrc.findArr[ind])
+				err := robotgo.KeyTap("Enter")
+				check(err)
+				bFound = true
+				break
+			}
+		}
+		if !bFound && len(pageSrc.findArr) > 0 {
+			pageSrc.lSrc.SetCurrentItem(pageSrc.findArr[0])
+		}
+	} else {
+
+		for ind := len(pageSrc.findArr) - 1; ind >= 0; ind-- {
+			if pageSrc.findArr[ind] < pageSrc.lSrc.GetCurrentItem() {
+				pageSrc.lSrc.SetCurrentItem(pageSrc.findArr[ind])
+				err := robotgo.KeyTap("Enter")
+				check(err)
+				bFound = true
+				break
+			}
+		}
+		if !bFound && len(pageSrc.findArr) > 0 {
+			pageSrc.lSrc.SetCurrentItem(pageSrc.findArr[len(pageSrc.findArr)-1])
+		}
+	}
+}
+
+func setNextImportantLine(bStraightWay bool) {
+	bFound := false
+	if bStraightWay {
+		for ind := range pageSrc.importantArr {
+			if pageSrc.importantArr[ind] > pageSrc.lSrc.GetCurrentItem() {
+				pageSrc.lSrc.SetCurrentItem(pageSrc.importantArr[ind])
+				err := robotgo.KeyTap("Enter")
+				check(err)
+				bFound = true
+				break
+			}
+		}
+		if !bFound && len(pageSrc.importantArr) > 0 {
+			pageSrc.lSrc.SetCurrentItem(pageSrc.importantArr[0])
+		}
+	} else {
+		for ind := len(pageSrc.importantArr) - 1; ind >= 0; ind-- {
+			if pageSrc.importantArr[ind] < pageSrc.lSrc.GetCurrentItem() {
+				pageSrc.lSrc.SetCurrentItem(pageSrc.importantArr[ind])
+				err := robotgo.KeyTap("Enter")
+				check(err)
+				bFound = true
+				break
+			}
+		}
+		if !bFound && len(pageSrc.importantArr) > 0 {
+			pageSrc.lSrc.SetCurrentItem(pageSrc.importantArr[len(pageSrc.importantArr)-1])
+		}
+	}
 }

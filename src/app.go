@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/gdamore/tcell/v2"
+	"github.com/go-vgo/robotgo"
 	"github.com/rivo/tview"
 	"log"
 	"os"
@@ -42,9 +43,13 @@ func (application *applicationType) registerGlobalShortcuts() {
 		case tcell.KeyF3:
 			beforeSwitch()
 			pageProTree.show()
+			err := robotgo.KeyTap("Enter")
+			check(err)
 		case tcell.KeyF4:
 			beforeSwitch()
 			pageSrc.show()
+			err := robotgo.KeyTap("Enter")
+			check(err)
 		case tcell.KeyF5:
 			beforeSwitch()
 			pageProDesc.show()

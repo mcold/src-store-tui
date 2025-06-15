@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"github.com/go-vgo/robotgo"
 	"log"
 	"os"
 	"path/filepath"
@@ -63,7 +64,6 @@ func (pageProTree *pageProTreeType) build() {
 			setProComment()
 			pageObjDesc.descArea.SetText("", true)
 		}
-
 		return event
 	})
 
@@ -237,6 +237,11 @@ func (pageProTree *pageProTreeType) build() {
 
 		if event.Key() == tcell.KeyInsert {
 			importFolder()
+		}
+
+		if event.Key() == tcell.KeyDown || event.Key() == tcell.KeyUp {
+			err := robotgo.KeyTap("Enter")
+			check(err)
 		}
 		return event
 	})
